@@ -1,8 +1,8 @@
-import { IpcMain } from 'electron';
+import { dialog, IpcMain } from 'electron';
 import { DocumentService } from '../services/document-service';
 import { IndexingService } from '../services/indexing-service';
 import { QaService } from '../services/qa-service';
-import { IPC_CHANNELS } from '../shared/types';
+import { AppStatus, IPC_CHANNELS } from '../shared/types';
 
 export interface Services {
   documentService: DocumentService;
@@ -18,8 +18,23 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
     return documentService.listDocuments();
   });
 
-  ipcMain.handle(IPC_CHANNELS.IMPORT_DOCUMENT, async (_event, filePath: string) => {
-    return documentService.importDocument(filePath);
+  ipcMain.handle(IPC_CHANNELS.IMPORT_DOCUMENT, async (_event, filePath?: string) => {
+    let target = filePath;
+    if (!target) {
+      const result = await dialog.showOpenDialog({
+        title: 'Import a document',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Documents', extensions: ['txt', 'md', 'markdown'] },
+        ],
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      target = result.filePaths[0];
+    }
+
+    const doc = documentService.importDocument(target);
+    await indexingService.startIndexing(doc.id);
+    return documentService.getDocument(doc.id);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_DOCUMENT, async (_event, id: string) => {
@@ -32,11 +47,16 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
 
   // Indexing
   ipcMain.handle(IPC_CHANNELS.START_INDEXING, async (_event, documentId?: string) => {
-    return indexingService.startIndexing(documentId);
+    await indexingService.startIndexing(documentId);
+    return toAppStatus(documentService, indexingService);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_INDEXING_STATUS, async () => {
-    return indexingService.getStatus();
+    return toAppStatus(documentService, indexingService);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_STATUS, async () => {
+    return toAppStatus(documentService, indexingService);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_CHUNKS, async (_event, documentId: string) => {
@@ -51,4 +71,13 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
   ipcMain.handle(IPC_CHANNELS.GET_HISTORY, async () => {
     return qaService.getHistory();
   });
+}
+
+function toAppStatus(documentService: DocumentService, indexingService: IndexingService): AppStatus {
+  const index = indexingService.getStatus();
+  return {
+    documentsLoaded: documentService.listDocuments().length,
+    indexStatus: index.status,
+    lastActivity: index.lastIndexed ?? '',
+  };
 }

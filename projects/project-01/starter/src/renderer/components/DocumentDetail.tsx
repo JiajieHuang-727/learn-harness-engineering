@@ -3,9 +3,10 @@ import { Document, Chunk } from '../../../shared/types';
 
 interface Props {
   document: Document;
+  onIndexed?: () => void;
 }
 
-export function DocumentDetail({ document }: Props) {
+export function DocumentDetail({ document, onIndexed }: Props) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [showChunks, setShowChunks] = useState(false);
 
@@ -43,7 +44,9 @@ export function DocumentDetail({ document }: Props) {
         </button>
         {document.status !== 'indexed' && (
           <button
-            onClick={() => window.knowledgeBase.indexing.start(document.id)}
+            onClick={() => {
+              void window.knowledgeBase.indexing.start(document.id).then(() => onIndexed?.());
+            }}
             style={{
               padding: '6px 12px',
               background: '#533483',

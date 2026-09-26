@@ -21,7 +21,9 @@ try {
 
 console.log('[dev] Starting Electron...');
 try {
-  execSync('npx electron .', { cwd: root, stdio: 'inherit' });
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  execSync('npx electron .', { cwd: root, stdio: 'inherit', env });
 } catch {
   // Electron exits with code 0 on normal close
 }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
@@ -10,7 +10,7 @@ declare global {
     knowledgeBase: {
       documents: {
         list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
+        import: (filePath?: string) => Promise<Document | null>;
         get: (id: string) => Promise<Document | null>;
         delete: (id: string) => Promise<boolean>;
       };
@@ -41,6 +41,10 @@ export function App() {
     try {
       const docs = await window.knowledgeBase.documents.list();
       setDocuments(docs);
+      setSelectedDoc(current => {
+        if (!current) return null;
+        return docs.find(doc => doc.id === current.id) ?? null;
+      });
       const status = await window.knowledgeBase.indexing.status();
       setAppStatus(status);
     } catch (err) {
@@ -48,11 +52,20 @@ export function App() {
     }
   }, []);
 
+  useEffect(() => {
+    void refreshDocuments();
+  }, [refreshDocuments]);
+
   const handleImport = useCallback(async () => {
-    // In a real app this would open a file dialog.
-    // For the course, we'll trigger import via the dev console or init script.
-    console.log('Import triggered - use window.knowledgeBase.documents.import(filePath)');
-  }, []);
+    try {
+      const imported = await window.knowledgeBase.documents.import();
+      if (!imported) return;
+      await refreshDocuments();
+      setSelectedDoc(imported);
+    } catch (err) {
+      console.error('Import failed:', err);
+    }
+  }, [refreshDocuments]);
 
   const handleSelectDocument = useCallback((doc: Document) => {
     setSelectedDoc(doc);
@@ -139,7 +152,7 @@ export function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
             {selectedDoc ? (
-              <DocumentDetail document={selectedDoc} />
+              <DocumentDetail document={selectedDoc} onIndexed={refreshDocuments} />
             ) : (
               <div style={{ color: '#666', textAlign: 'center', paddingTop: '40px' }}>
                 Select a document or ask a question to get started

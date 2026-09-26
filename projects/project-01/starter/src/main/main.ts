@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import * as fs from 'fs';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { DocumentService } from '../services/document-service';
@@ -35,12 +36,14 @@ function createWindow() {
   });
 }
 
-function initializeServices() {
+async function initializeServices() {
   const dataDir = path.join(app.getPath('userData'), 'knowledge-base-data');
   const persistence = new PersistenceService(dataDir);
   const documentService = new DocumentService(persistence);
   const indexingService = new IndexingService(persistence);
-  const qaService = new QaService(persistence);
+  const qaService = new QaService(persistence, indexingService);
+
+  await seedSampleDocuments(documentService, indexingService);
 
   registerIpcHandlers(ipcMain, {
     documentService,
@@ -49,8 +52,28 @@ function initializeServices() {
   });
 }
 
-app.whenReady().then(() => {
-  initializeServices();
+/** First launch copies the bundled samples so the list and Q&A are usable immediately. */
+async function seedSampleDocuments(
+  documentService: DocumentService,
+  indexingService: IndexingService,
+) {
+  if (documentService.listDocuments().length > 0) return;
+
+  const sampleDir = path.join(app.getAppPath(), 'data', 'sample-documents');
+  if (!fs.existsSync(sampleDir)) return;
+
+  for (const name of fs.readdirSync(sampleDir)) {
+    if (!/\.(md|txt|markdown)$/i.test(name)) continue;
+    const fullPath = path.join(sampleDir, name);
+    if (!fs.statSync(fullPath).isFile()) continue;
+    documentService.importDocument(fullPath);
+  }
+
+  await indexingService.startIndexing();
+}
+
+app.whenReady().then(async () => {
+  await initializeServices();
   createWindow();
 
   app.on('activate', () => {

@@ -24,17 +24,14 @@ export class IndexingService {
     const status = this.getStatus();
 
     if (documentId) {
-      // Index a single document
       const content = this.persistence.readText(`content/${documentId}.txt`);
       if (!content) {
         return { ...status, status: 'error' };
       }
-      const chunks = this.chunkDocument(documentId, content);
-      this.persistence.writeJson(`${CHUNKS_DIR}/${documentId}.json`, chunks);
+      this.saveChunks(documentId, this.chunkDocument(documentId, content));
       return this.getStatus();
     }
 
-    // Index all documents that haven't been indexed yet
     const docsMeta = this.persistence.readJson<Document[]>('documents-meta.json') ?? [];
     const chunksMeta = this.persistence.readJson<Record<string, string[]>>(INDEX_META) ?? {};
 
@@ -44,12 +41,10 @@ export class IndexingService {
       const content = this.persistence.readText(`content/${doc.id}.txt`);
       if (!content) continue;
 
-      const chunks = this.chunkDocument(doc.id, content);
-      this.persistence.writeJson(`${CHUNKS_DIR}/${doc.id}.json`, chunks);
-      chunksMeta[doc.id] = chunks.map(c => c.id);
+      this.saveChunks(doc.id, this.chunkDocument(doc.id, content));
+      chunksMeta[doc.id] = this.getChunksForDocument(doc.id).map(chunk => chunk.id);
     }
 
-    this.persistence.writeJson(INDEX_META, chunksMeta);
     return this.getStatus();
   }
 
@@ -86,6 +81,22 @@ export class IndexingService {
     }
 
     return allChunks;
+  }
+
+  /** Persist chunks and mark the document indexed so Q&A can cite them. */
+  private saveChunks(documentId: string, chunks: Chunk[]): void {
+    this.persistence.writeJson(`${CHUNKS_DIR}/${documentId}.json`, chunks);
+
+    const chunksMeta = this.persistence.readJson<Record<string, string[]>>(INDEX_META) ?? {};
+    chunksMeta[documentId] = chunks.map(chunk => chunk.id);
+    this.persistence.writeJson(INDEX_META, chunksMeta);
+
+    const docs = this.persistence.readJson<Document[]>('documents-meta.json') ?? [];
+    const index = docs.findIndex(doc => doc.id === documentId);
+    if (index === -1) return;
+
+    docs[index] = { ...docs[index], status: 'indexed', chunks: chunks.length };
+    this.persistence.writeJson('documents-meta.json', docs);
   }
 
   /** Split a document into chunks of ~500 characters at paragraph boundaries. */
