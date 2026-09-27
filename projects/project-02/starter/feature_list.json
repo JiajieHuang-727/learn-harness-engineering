@@ -54,9 +54,9 @@
       "id": "basic-persistence",
       "name": "Basic Persistence",
       "description": "Imported documents persist across app restarts via filesystem storage",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "Import writes documents-meta.json and content/<id>.txt under userData/knowledge-base-data. A new DocumentService on the same directory reloads the list and body; delete clears both. App calls refreshDocuments() on mount, and indexing status reports documentsLoaded from that file. Service check: tests/document-persistence.test.ts.",
+      "testedAt": "2026-09-27T06:46:00Z"
     }
   ]
 }

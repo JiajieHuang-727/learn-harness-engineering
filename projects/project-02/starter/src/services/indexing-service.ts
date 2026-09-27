@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Chunk, Document } from '../shared/types';
+import { AppStatus, Chunk, Document } from '../shared/types';
 import { PersistenceService } from './persistence-service';
 
 const INDEX_META = 'index-meta.json';
@@ -67,6 +67,16 @@ export class IndexingService {
       currentIndexed,
       totalDocuments,
       lastIndexed: new Date().toISOString(),
+    };
+  }
+
+  /** Map index progress onto the status bar shape. */
+  getAppStatus(): AppStatus {
+    const indexStatus = this.getStatus();
+    return {
+      documentsLoaded: indexStatus.totalDocuments,
+      indexStatus: indexStatus.status,
+      lastActivity: indexStatus.lastIndexed ?? '',
     };
   }
 
