@@ -4,44 +4,36 @@
 
 ### What Was Accomplished
 
-1. **Document Import** -- File picker imports `.txt` and `.md` files into an in-memory library:
-   - ImportPanel resolves the real path with `documents.pathForFile` (`webUtils.getPathForFile`)
-   - Other extensions and files over 10 MB fail in the panel and do not change the library
-   - `DocumentService.importDocument()` validates the same rules, then keeps metadata and text in memory
+1. **Basic persistence** -- Imported documents survive a process restart:
+   - `DocumentService.importDocument()` copies the source file into `documents/`, writes `content/<id>.txt`, and appends `documents-meta.json`
+   - `listDocuments()`, `getDocument()`, and `getDocumentContent()` read that layout back through `PersistenceService`
+   - `deleteDocument()` removes the copied source, extracted text, `chunks/<id>.json`, and the document's `index-meta.json` entry
+   - `App` calls `refreshDocuments()` on mount, so the sidebar reloads the saved library
+   - Extension and 10 MB checks still reject an import before any file is written
 
-2. **Document Detail with Content** -- DocumentDetail shows metadata and loaded text:
-   - Added `documents:get-content` and `documents.getContent`
-   - View Content loads the in-memory text into a scrollable pre-wrap container
-   - Delete removes that document from memory and clears the selection when it matches
+2. **Document Import** and **Document Detail** from the previous session still apply. View Content now reads `content/<id>.txt` instead of an in-memory map.
 
 ### What Remains
 
-- **Basic persistence** is not started. Restarting the app clears the library. Import does not copy the source file, write `content/<id>.txt`, or update `documents-meta.json`. `App` does not call `refreshDocuments()` on mount.
-- Indexing still reads on-disk content, so Index Document does not see documents imported in this session.
+No remaining Project 02 features. All entries in `feature_list.json` are `"pass"`.
+
+Indexing a single document still writes `chunks/<id>.json` without updating `index-meta.json`. Full-library indexing does update that file. That behavior was already present and was not part of this change.
 
 ### Decisions Made
 
-- Kept document metadata and extracted text in `DocumentService` memory so persistence can be added in a later session without changing the IPC shape.
-- `PersistenceService` is still constructed and injected, and is unused by import, list, content, and delete.
-- Added `GET_DOCUMENT_CONTENT` instead of returning text from `documents:get`, so list payloads stay small.
-- Validation runs in the import panel and again in `DocumentService`.
+- Disk is the source of truth. `DocumentService` no longer keeps a private in-memory library.
+- Rejected imports do not create `documents-meta.json` or copy the source file.
+- Delete also drops chunk and index-meta data so a removed document cannot leave indexing status counting a missing file.
+- Added `PersistenceService.deleteFile()` so data-directory deletes stay in the persistence layer.
 
 ### Files Modified
 
-- `src/services/document-service.ts` -- In-memory import, content, and delete, with extension and size checks
-- `src/shared/types.ts` -- Added `GET_DOCUMENT_CONTENT`
-- `src/main/ipc-handlers.ts` -- Registered `documents:get-content`
-- `src/preload/preload.ts` -- Exposed `getContent` and `pathForFile`. Channel names are inlined because a sandboxed preload cannot require `shared/types`.
-- `src/renderer/App.tsx` -- Import toggle, list refresh, delete selection clearing
-- `src/renderer/components/ImportPanel.tsx` -- File picker, path resolution, inline errors
-- `src/renderer/components/DocumentDetail.tsx` -- View Content, metadata, delete
-- `src/renderer/types.d.ts` -- `getContent` and `pathForFile` types
-- `src/renderer/components/DocumentList.tsx`, `src/renderer/components/StatusBar.tsx` -- Correct shared type imports
-- `src/services/qa-service.ts` -- Removed unused `Chunk` import so `npm run check` passes
-- `tests/document-service.test.ts` -- Import, rejection, and delete coverage
-- `vite.config.ts` -- Point Vitest at `tests/`
-- `docs/ARCHITECTURE.md`, `docs/PRODUCT.md` -- In-memory import and deferred persistence
-- `feature_list.json` -- Import and detail marked pass; persistence still not started
+- `src/services/document-service.ts` -- Persist import, list, content, update, and delete
+- `src/services/persistence-service.ts` -- Added `deleteFile()`
+- `src/renderer/App.tsx` -- Load the document list on mount
+- `tests/document-service.test.ts` -- Import, reload, rejection, and delete coverage
+- `docs/ARCHITECTURE.md`, `docs/PRODUCT.md` -- Persistence is now the written behavior
+- `feature_list.json` -- `basic-persistence` marked pass
 
 ### Blockers
 
@@ -49,4 +41,4 @@ None.
 
 ### Next Steps
 
-Persist the in-memory library through `PersistenceService`: copy the source file, write `content/<id>.txt` and `documents-meta.json`, delete those files with the document, and call `refreshDocuments()` on mount so the list survives a restart.
+Project 02 product slice is complete. A later project can fix single-document indexing so it records chunk ids in `index-meta.json`.

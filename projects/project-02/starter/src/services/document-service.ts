@@ -6,24 +6,25 @@ import { PersistenceService } from './persistence-service';
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['.txt', '.md']);
+const DOCUMENTS_META = 'documents-meta.json';
+const INDEX_META = 'index-meta.json';
 
 export class DocumentService {
-  private readonly documents: Document[] = [];
-  private readonly contents = new Map<string, string>();
+  private persistence: PersistenceService;
 
   constructor(persistence: PersistenceService) {
-    // Injected for the later persistence session. Import does not write through it yet.
-    void persistence;
+    this.persistence = persistence;
   }
 
-  /** List documents imported in this process. */
+  /** List documents stored in documents-meta.json. */
   listDocuments(): Document[] {
-    return this.documents.map(doc => ({ ...doc }));
+    const docs = this.persistence.readJson<Document[]>(DOCUMENTS_META) ?? [];
+    return docs.map(doc => ({ ...doc }));
   }
 
   /**
    * Import a .txt or .md file from the given path.
-   * Metadata and text stay in memory. Nothing is written to the data directory.
+   * Copies the source file, writes extracted text, and appends metadata.
    */
   importDocument(filePath: string): Document {
     if (!filePath || !fs.existsSync(filePath)) {
@@ -55,40 +56,62 @@ export class DocumentService {
       status: 'imported',
     };
 
-    this.documents.push(doc);
-    this.contents.set(doc.id, content);
+    this.persistence.copyFileToDocuments(filePath, filename);
+    this.persistence.writeText(`content/${doc.id}.txt`, content);
+
+    const docs = this.listDocuments();
+    docs.push(doc);
+    this.persistence.writeJson(DOCUMENTS_META, docs);
     return { ...doc };
   }
 
   /** Get a single document by ID. */
   getDocument(id: string): Document | null {
-    const doc = this.documents.find(item => item.id === id);
+    const doc = this.listDocuments().find(item => item.id === id);
     return doc ? { ...doc } : null;
   }
 
-  /** Get the text content of a document held in memory. */
+  /** Get the extracted text stored for a document. */
   getDocumentContent(id: string): string | null {
-    if (!this.documents.some(item => item.id === id)) return null;
-    return this.contents.get(id) ?? null;
+    if (!this.listDocuments().some(item => item.id === id)) return null;
+    return this.persistence.readText(`content/${id}.txt`);
   }
 
-  /** Update a document's metadata in memory. */
+  /** Update a document's metadata and write it back. */
   updateDocument(id: string, updates: Partial<Document>): Document | null {
-    const index = this.documents.findIndex(item => item.id === id);
+    const docs = this.listDocuments();
+    const index = docs.findIndex(item => item.id === id);
     if (index === -1) return null;
 
-    const next: Document = { ...this.documents[index], ...updates, id };
-    this.documents[index] = next;
+    const next: Document = { ...docs[index], ...updates, id };
+    docs[index] = next;
+    this.persistence.writeJson(DOCUMENTS_META, docs);
     return { ...next };
   }
 
-  /** Delete a document from the in-memory library. */
+  /**
+   * Delete a document and its stored files.
+   * Removes the copied source, extracted text, chunks, and index entry.
+   */
   deleteDocument(id: string): boolean {
-    const index = this.documents.findIndex(item => item.id === id);
-    if (index === -1) return false;
+    const docs = this.listDocuments();
+    const doc = docs.find(item => item.id === id);
+    if (!doc) return false;
 
-    this.documents.splice(index, 1);
-    this.contents.delete(id);
+    this.persistence.deleteFromDocuments(doc.filename);
+    this.persistence.deleteFile(`content/${id}.txt`);
+    this.persistence.deleteFile(`chunks/${id}.json`);
+
+    const chunksMeta = this.persistence.readJson<Record<string, string[]>>(INDEX_META);
+    if (chunksMeta && Object.prototype.hasOwnProperty.call(chunksMeta, id)) {
+      delete chunksMeta[id];
+      this.persistence.writeJson(INDEX_META, chunksMeta);
+    }
+
+    this.persistence.writeJson(
+      DOCUMENTS_META,
+      docs.filter(item => item.id !== id),
+    );
     return true;
   }
 }

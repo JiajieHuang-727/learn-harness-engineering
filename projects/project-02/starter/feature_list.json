@@ -54,9 +54,9 @@
       "id": "basic-persistence",
       "name": "Basic Persistence",
       "description": "Imported documents persist across app restarts via filesystem storage",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "DocumentService writes documents/<filename>, content/<id>.txt, and documents-meta.json on import, and deletes those files plus chunks and the index-meta entry on delete. A new DocumentService reading the same data directory reloads the library. App calls refreshDocuments() on mount. tests/document-service.test.ts covers import, reload, rejection, and delete.",
+      "testedAt": "2026-09-27T03:40:00Z"
     }
   ]
 }

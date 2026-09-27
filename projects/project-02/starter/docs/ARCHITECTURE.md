@@ -67,8 +67,8 @@ React 18 application bundled by Vite:
 ### Services (`src/services/`)
 
 - `PersistenceService` -- Low-level JSON/text file I/O with atomic writes.
-- `DocumentService` -- In-memory document CRUD and extracted text. Filesystem persistence is deferred.
-- `IndexingService` -- Paragraph-aware chunking (~500 chars) and index management. It still reads on-disk content, so it does not see documents imported into memory.
+- `DocumentService` -- Document CRUD. Metadata, extracted text, and a copy of the source file are stored through `PersistenceService`.
+- `IndexingService` -- Paragraph-aware chunking (~500 chars) and index management. It reads `documents-meta.json` and `content/<id>.txt`.
 - `QaService` -- Mock Q&A with keyword-based retrieval and citations.
 
 ## Import Flow
@@ -92,26 +92,28 @@ The document import flow demonstrates the full IPC data path:
       and the size is at most 10 MB
    b. Reads file content and stats from the source path
    c. Creates a Document metadata object
-   d. Keeps metadata and extracted text in memory for this process
+   d. Copies the source file into documents/ via PersistenceService
+   e. Writes extracted text to content/<id>.txt
+   f. Appends the metadata object to documents-meta.json
 10. Result flows back through IPC
 11. App.tsx calls refreshDocuments() to update the list
 12. DocumentList re-renders with the new document
 ```
 
-Unsupported files and files over 10 MB fail in the import panel before the library changes. The same checks run again in `DocumentService`, so a rejected import does not add a document.
-
-Filesystem persistence is not implemented. Import does not copy the file, write `content/<id>.txt`, or append `documents-meta.json`. The in-memory library is empty after a restart.
+Unsupported files and files over 10 MB fail in the import panel before the library changes. The same checks run again in `DocumentService`, so a rejected import does not add a document or write files.
 
 ## Startup Load
 
-Not implemented. `App` does not call `refreshDocuments()` on mount, and there is no saved library to reload.
+`App` calls `refreshDocuments()` on mount. That invokes `documents:list`, and `DocumentService.listDocuments()` reads `documents-meta.json`. A restarted process shows the same library.
 
 ## Delete Flow
 
 ```
 1. User clicks Delete in DocumentDetail
 2. App calls window.knowledgeBase.documents.delete(id)
-3. DocumentService drops the in-memory metadata and text for that id
+3. DocumentService removes the copied source file, content/<id>.txt,
+   chunks/<id>.json, the document's entry in index-meta.json, and the
+   metadata row in documents-meta.json
 4. App clears the selection when it matches and refreshes the list
 ```
 
@@ -124,22 +126,25 @@ Document content viewing adds a dedicated IPC channel:
 2. DocumentDetail calls window.knowledgeBase.documents.getContent(id)
 3. Preload invokes 'documents:get-content' IPC
 4. ipc-handlers delegates to DocumentService.getDocumentContent(id)
-5. DocumentService returns the text kept in memory for that id
+5. PersistenceService reads content/<id>.txt
 6. Content flows back to renderer for display in a scrollable pre-wrap container
 ```
 
 ## Data Storage
 
-Document metadata and extracted text live in `DocumentService` memory only. The on-disk layout below is the planned persistence layout and is not written by import or delete yet.
+Import and delete write this layout under the application data directory (`userData/knowledge-base-data`). `DocumentService` reads it back on every list, get, and content call, so the library survives a process restart.
 
 ```
 knowledge-base-data/
   documents-meta.json     # Document metadata array
+  documents/
+    <filename>            # Copy of the imported source file
   content/
     <doc-id>.txt          # Extracted text content per document
   chunks/
     <doc-id>.json         # Chunk array per document
-  index/
-    index-meta.json       # Mapping of document IDs to chunk IDs
+  index-meta.json         # Mapping of document IDs to chunk IDs
   qa-history.json         # Q&A interaction log
 ```
+
+`IndexingService` writes `index-meta.json` at the data-directory root. `PersistenceService` also creates an empty `index/` directory for later index files.

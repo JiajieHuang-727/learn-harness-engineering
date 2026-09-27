@@ -12,7 +12,7 @@ A desktop application for managing a personal knowledge base. Users import text 
 - View document metadata: title, filename, size, import date, indexing status.
 - View full document content in a scrollable text viewer.
 - Browse a list of all imported documents in a sidebar panel.
-- Delete a document from the in-memory library.
+- Delete a document and its stored data: the copied source file, extracted text, chunks, and metadata.
 
 ### Text Indexing
 - Split documents into ~500-character chunks at paragraph boundaries.
@@ -27,9 +27,9 @@ A desktop application for managing a personal knowledge base. Users import text 
 - Full Q&A history is persisted across sessions.
 
 ### Persistence
-- Not implemented. Imported documents and their text exist only in the current process.
-- The document list does not reload on startup.
-- On-disk storage under the application data directory is reserved for a later change.
+- Imported documents persist across application restarts.
+- The document list loads automatically on startup.
+- Metadata, extracted text, and a copy of each source file are stored under the application data directory.
 
 ### Status Bar
 - Real-time display of index status (idle, indexing, ready, error).
