@@ -38,17 +38,17 @@
       "id": "document-import",
       "name": "Document Import",
       "description": "Users can import .txt and .md files via ImportPanel with file picker",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "ImportPanel resolves the picked file with webUtils.getPathForFile and sends the path through documents:import. The list refreshes and the new document is selected. Service check: import of notes.md returns metadata and stores content.",
+      "testedAt": "2026-09-27T07:00:00Z"
     },
     {
       "id": "document-detail",
       "name": "Document Detail with Content",
       "description": "DocumentDetail shows full document content, metadata, and delete button",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "View Content loads text through documents:get-content. Delete removes metadata and content/<id>.txt. Service check: getDocumentContent returns the file body, and delete clears it.",
+      "testedAt": "2026-09-27T07:00:00Z"
     },
     {
       "id": "basic-persistence",

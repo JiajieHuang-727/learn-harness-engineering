@@ -1,32 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { ImportPanel } from './components/ImportPanel';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
-
-declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
-        get: (id: string) => Promise<Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
-        status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
-      };
-      qa: {
-        ask: (question: string) => Promise<QAResponse>;
-        history: () => Promise<Array<{ question: string; response: QAResponse }>>;
-      };
-    };
-  }
-}
+import { Document, AppStatus, QAResponse } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -38,6 +16,7 @@ export function App() {
   });
   const [lastResponse, setLastResponse] = useState<QAResponse | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const refreshDocuments = useCallback(async () => {
     try {
@@ -52,10 +31,14 @@ export function App() {
 
   const handleImport = useCallback(async (filePath: string) => {
     try {
-      await window.knowledgeBase.documents.import(filePath);
+      setImportError(null);
+      const doc = await window.knowledgeBase.documents.import(filePath);
       await refreshDocuments();
+      setSelectedDoc(doc);
       setShowImport(false);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Import failed';
+      setImportError(message);
       console.error('Import failed:', err);
     }
   }, [refreshDocuments]);
@@ -132,7 +115,10 @@ export function App() {
               Documents ({documents.length})
             </span>
             <button
-              onClick={() => setShowImport(!showImport)}
+              onClick={() => {
+                setShowImport(!showImport);
+                setImportError(null);
+              }}
               style={{
                 padding: '4px 10px',
                 background: '#533483',
@@ -143,7 +129,7 @@ export function App() {
                 fontSize: '12px',
               }}
             >
-              + Import
+              {showImport ? 'Cancel' : '+ Import'}
             </button>
           </div>
           <DocumentList
@@ -157,7 +143,7 @@ export function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
             {showImport ? (
-              <ImportPanel onImport={handleImport} />
+              <ImportPanel onImport={handleImport} error={importError} />
             ) : selectedDoc ? (
               <DocumentDetail
                 document={selectedDoc}

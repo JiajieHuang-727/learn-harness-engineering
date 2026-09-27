@@ -82,6 +82,11 @@ export class DocumentService {
 
     this.persistence.deleteFromDocuments(doc.filename);
 
+    const contentPath = path.join(this.persistence.getDataDir(), 'content', `${id}.txt`);
+    if (fs.existsSync(contentPath)) {
+      fs.unlinkSync(contentPath);
+    }
+
     const updated = docs.filter(d => d.id !== id);
     this.persistence.writeJson(DOCUMENTS_META, updated);
     return true;
