@@ -1,21 +1,38 @@
-import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '../shared/types';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
+
+// A sandboxed preload cannot require other application modules, so the channel
+// names are inlined here. They must match IPC_CHANNELS in src/shared/types.ts.
+const channels = {
+  LIST_DOCUMENTS: 'documents:list',
+  IMPORT_DOCUMENT: 'documents:import',
+  GET_DOCUMENT: 'documents:get',
+  GET_DOCUMENT_CONTENT: 'documents:get-content',
+  DELETE_DOCUMENT: 'documents:delete',
+  START_INDEXING: 'indexing:start',
+  GET_INDEXING_STATUS: 'indexing:status',
+  GET_CHUNKS: 'indexing:chunks',
+  ASK_QUESTION: 'qa:ask',
+  GET_HISTORY: 'qa:history',
+  GET_STATUS: 'app:status',
+} as const;
 
 const api = {
   documents: {
-    list: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_DOCUMENTS),
-    import: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.IMPORT_DOCUMENT, filePath),
-    get: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.GET_DOCUMENT, id),
-    delete: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_DOCUMENT, id),
+    list: () => ipcRenderer.invoke(channels.LIST_DOCUMENTS),
+    import: (filePath: string) => ipcRenderer.invoke(channels.IMPORT_DOCUMENT, filePath),
+    get: (id: string) => ipcRenderer.invoke(channels.GET_DOCUMENT, id),
+    getContent: (id: string) => ipcRenderer.invoke(channels.GET_DOCUMENT_CONTENT, id),
+    delete: (id: string) => ipcRenderer.invoke(channels.DELETE_DOCUMENT, id),
+    pathForFile: (file: Parameters<typeof webUtils.getPathForFile>[0]) => webUtils.getPathForFile(file),
   },
   indexing: {
-    start: (documentId?: string) => ipcRenderer.invoke(IPC_CHANNELS.START_INDEXING, documentId),
-    status: () => ipcRenderer.invoke(IPC_CHANNELS.GET_INDEXING_STATUS),
-    chunks: (documentId: string) => ipcRenderer.invoke(IPC_CHANNELS.GET_CHUNKS, documentId),
+    start: (documentId?: string) => ipcRenderer.invoke(channels.START_INDEXING, documentId),
+    status: () => ipcRenderer.invoke(channels.GET_INDEXING_STATUS),
+    chunks: (documentId: string) => ipcRenderer.invoke(channels.GET_CHUNKS, documentId),
   },
   qa: {
-    ask: (question: string) => ipcRenderer.invoke(IPC_CHANNELS.ASK_QUESTION, question),
-    history: () => ipcRenderer.invoke(IPC_CHANNELS.GET_HISTORY),
+    ask: (question: string) => ipcRenderer.invoke(channels.ASK_QUESTION, question),
+    history: () => ipcRenderer.invoke(channels.GET_HISTORY),
   },
 };
 

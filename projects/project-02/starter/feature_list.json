@@ -38,17 +38,17 @@
       "id": "document-import",
       "name": "Document Import",
       "description": "Users can import .txt and .md files via ImportPanel with file picker",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "ImportPanel resolves the picked file with documents.pathForFile, rejects other extensions and files over 10 MB in the panel, and calls documents.import. DocumentService keeps metadata and text in memory. tests/document-service.test.ts covers import, rejection, and no documents-meta.json write.",
+      "testedAt": "2026-09-27T03:25:00Z"
     },
     {
       "id": "document-detail",
       "name": "Document Detail with Content",
       "description": "DocumentDetail shows full document content, metadata, and delete button",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "View Content calls documents.getContent over documents:get-content and renders the text in a scrollable pre-wrap container. The detail view shows title, filename, size, import date, and status, and Delete removes the in-memory document.",
+      "testedAt": "2026-09-27T03:25:00Z"
     },
     {
       "id": "basic-persistence",

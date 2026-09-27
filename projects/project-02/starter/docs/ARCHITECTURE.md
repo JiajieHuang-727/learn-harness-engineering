@@ -41,7 +41,7 @@ The Knowledge Base is an Electron desktop application built with TypeScript and 
 
 ### Preload (`src/preload/`)
 
-The preload script exposes a typed API via `contextBridge`:
+The preload script is sandboxed, so it cannot `require` other application modules. Channel name strings are inlined in `src/preload/preload.ts` and kept identical to `IPC_CHANNELS`. It exposes a typed API via `contextBridge`:
 
 ```typescript
 window.knowledgeBase = {
@@ -50,6 +50,8 @@ window.knowledgeBase = {
   qa:         { ask, history },
 }
 ```
+
+`documents.pathForFile` calls `webUtils.getPathForFile` in the preload script. It is synchronous and exists so the sandboxed renderer can turn a picked `File` into a filesystem path.
 
 ### Renderer (`src/renderer/`)
 
@@ -65,8 +67,8 @@ React 18 application bundled by Vite:
 ### Services (`src/services/`)
 
 - `PersistenceService` -- Low-level JSON/text file I/O with atomic writes.
-- `DocumentService` -- Document CRUD with content storage and cleanup.
-- `IndexingService` -- Paragraph-aware chunking (~500 chars) and index management.
+- `DocumentService` -- In-memory document CRUD and extracted text. Filesystem persistence is deferred.
+- `IndexingService` -- Paragraph-aware chunking (~500 chars) and index management. It still reads on-disk content, so it does not see documents imported into memory.
 - `QaService` -- Mock Q&A with keyword-based retrieval and citations.
 
 ## Import Flow
@@ -88,29 +90,28 @@ The document import flow demonstrates the full IPC data path:
 9. DocumentService:
    a. Validates the path is an existing file, the extension is .txt or .md,
       and the size is at most 10 MB
-   b. Reads file content and stats
-   c. Creates Document metadata object
-   d. Copies file to documents directory via PersistenceService
-   e. Stores extracted text content via PersistenceService
-   f. Appends to documents-meta.json
+   b. Reads file content and stats from the source path
+   c. Creates a Document metadata object
+   d. Keeps metadata and extracted text in memory for this process
 10. Result flows back through IPC
 11. App.tsx calls refreshDocuments() to update the list
 12. DocumentList re-renders with the new document
 ```
 
-Unsupported files and files over 10 MB fail in the import panel. The library is left unchanged.
+Unsupported files and files over 10 MB fail in the import panel before the library changes. The same checks run again in `DocumentService`, so a rejected import does not add a document.
+
+Filesystem persistence is not implemented. Import does not copy the file, write `content/<id>.txt`, or append `documents-meta.json`. The in-memory library is empty after a restart.
 
 ## Startup Load
 
-`App` calls `refreshDocuments()` on mount. That calls `documents.list()`, and `DocumentService` reads `documents-meta.json` from `userData/knowledge-base-data`. Imported documents are still listed after a restart.
+Not implemented. `App` does not call `refreshDocuments()` on mount, and there is no saved library to reload.
 
 ## Delete Flow
 
 ```
 1. User clicks Delete in DocumentDetail
 2. App calls window.knowledgeBase.documents.delete(id)
-3. DocumentService removes documents/<filename>, content/<id>.txt,
-   and the metadata entry
+3. DocumentService drops the in-memory metadata and text for that id
 4. App clears the selection when it matches and refreshes the list
 ```
 
@@ -123,11 +124,13 @@ Document content viewing adds a dedicated IPC channel:
 2. DocumentDetail calls window.knowledgeBase.documents.getContent(id)
 3. Preload invokes 'documents:get-content' IPC
 4. ipc-handlers delegates to DocumentService.getDocumentContent(id)
-5. PersistenceService reads content/<id>.txt
-6. Content flows back to renderer for display in pre-wrap container
+5. DocumentService returns the text kept in memory for that id
+6. Content flows back to renderer for display in a scrollable pre-wrap container
 ```
 
 ## Data Storage
+
+Document metadata and extracted text live in `DocumentService` memory only. The on-disk layout below is the planned persistence layout and is not written by import or delete yet.
 
 ```
 knowledge-base-data/

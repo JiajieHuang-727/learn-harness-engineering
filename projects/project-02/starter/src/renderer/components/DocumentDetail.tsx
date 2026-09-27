@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Document, Chunk } from '../../../shared/types';
+import { useEffect, useState } from 'react';
+import { Document, Chunk } from '../../shared/types';
 
 interface Props {
   document: Document;
@@ -10,13 +10,54 @@ export function DocumentDetail({ document, onDelete }: Props) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [showChunks, setShowChunks] = useState(false);
   const [content, setContent] = useState<string | null>(null);
+  const [showContent, setShowContent] = useState(false);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
 
   useEffect(() => {
-    window.knowledgeBase.indexing.chunks(document.id).then(setChunks);
+    setChunks([]);
+    setContent(null);
+    setShowContent(false);
+    setShowChunks(false);
+    setLoadingContent(false);
+    setContentError(null);
+
+    let cancelled = false;
+    window.knowledgeBase.indexing.chunks(document.id).then(next => {
+      if (!cancelled) setChunks(next);
+    }).catch(err => {
+      console.error('Failed to load chunks:', err);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [document.id]);
 
-  // TODO: Load document content for viewing -- not yet implemented
-  // This is part of the document-detail feature to be completed.
+  const loadContent = async () => {
+    if (content !== null) {
+      setShowContent(!showContent);
+      return;
+    }
+
+    setLoadingContent(true);
+    setContentError(null);
+    try {
+      const text = await window.knowledgeBase.documents.getContent(document.id);
+      if (text === null) {
+        setContentError('Content is not available.');
+        setShowContent(false);
+        return;
+      }
+      setContent(text);
+      setShowContent(true);
+    } catch (err) {
+      console.error('Failed to load document content:', err);
+      setContentError('Failed to load document content.');
+    } finally {
+      setLoadingContent(false);
+    }
+  };
 
   return (
     <div>
@@ -31,7 +72,22 @@ export function DocumentDetail({ document, onDelete }: Props) {
         {document.chunks !== undefined && <div>Chunks: {document.chunks}</div>}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => { void loadContent(); }}
+          disabled={loadingContent}
+          style={{
+            padding: '6px 12px',
+            background: '#0f3460',
+            color: '#e0e0e0',
+            border: '1px solid #1a1a4e',
+            borderRadius: '4px',
+            cursor: loadingContent ? 'wait' : 'pointer',
+            fontSize: '12px',
+          }}
+        >
+          {loadingContent ? 'Loading...' : showContent ? 'Hide Content' : 'View Content'}
+        </button>
         <button
           onClick={() => setShowChunks(!showChunks)}
           style={{
@@ -48,7 +104,7 @@ export function DocumentDetail({ document, onDelete }: Props) {
         </button>
         {document.status !== 'indexed' && (
           <button
-            onClick={() => window.knowledgeBase.indexing.start(document.id)}
+            onClick={() => { void window.knowledgeBase.indexing.start(document.id); }}
             style={{
               padding: '6px 12px',
               background: '#533483',
@@ -80,8 +136,13 @@ export function DocumentDetail({ document, onDelete }: Props) {
         )}
       </div>
 
-      {/* Content viewer -- placeholder until document-detail feature is implemented */}
-      {content && (
+      {contentError && (
+        <div style={{ marginBottom: '12px', fontSize: '12px', color: '#e07a7a' }}>
+          {contentError}
+        </div>
+      )}
+
+      {showContent && content !== null && (
         <div style={{
           padding: '16px',
           background: '#1a1a3e',
@@ -90,6 +151,9 @@ export function DocumentDetail({ document, onDelete }: Props) {
           fontSize: '13px',
           lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
+          maxHeight: '400px',
+          overflow: 'auto',
+          marginBottom: '16px',
         }}>
           {content}
         </div>
