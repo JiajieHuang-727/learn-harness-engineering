@@ -2,15 +2,15 @@
 
 ## System Overview
 
-The Knowledge Base is an Electron desktop application built with TypeScript and React. It provides document import, text indexing with chunking, and grounded question answering with citations.
+The Knowledge Base is an Electron desktop application built with TypeScript and React. It provides document import with file picker, text indexing with chunking, content viewing, and grounded question answering with citations.
 
 ## Layer Diagram
 
 ```
 +-----------------------------------------------------------+
 |                     Renderer (React)                       |
-|  App.tsx -> DocumentList, DocumentDetail, QuestionPanel,  |
-|             StatusBar, ImportPanel                         |
+|  App.tsx -> DocumentList, DocumentDetail, ImportPanel,    |
+|             QuestionPanel, StatusBar                       |
 +-----------------------------------------------------------+
          |  window.knowledgeBase.* (typed IPC bridge)
 +-----------------------------------------------------------+
@@ -35,71 +35,99 @@ The Knowledge Base is an Electron desktop application built with TypeScript and 
 
 ### Main Process (`src/main/`)
 
-The main process is the Node.js process that manages the application lifecycle. Responsibilities:
-
-- **Window management**: Creates `BrowserWindow` instances with secure web preferences (`contextIsolation: true`, `nodeIntegration: false`).
+- **Window management**: Creates `BrowserWindow` instances with secure web preferences.
 - **IPC registration**: Maps IPC channel names to service methods via `registerIpcHandlers()`.
-- **Service initialization**: Constructs `PersistenceService`, `DocumentService`, `IndexingService`, and `QaService` with dependency injection.
-
-**Key invariant**: The main process never imports React or renderer code.
+- **Service initialization**: Constructs all services with dependency injection.
 
 ### Preload (`src/preload/`)
 
-The preload script runs in the renderer context before any page scripts load. It uses Electron's `contextBridge` to expose a limited, typed API:
+The preload script exposes a typed API via `contextBridge`:
 
 ```typescript
 window.knowledgeBase = {
-  documents: { list, import, get, delete },
+  documents: { list, import, get, getContent, delete, pathForFile },
   indexing:   { start, status, chunks },
   qa:         { ask, history },
 }
 ```
 
-**Key invariant**: The preload bridge is the only communication channel between renderer and main. No Node.js modules are accessible from the renderer.
-
 ### Renderer (`src/renderer/`)
 
-The renderer is a React 18 application bundled by Vite. Components:
+React 18 application bundled by Vite:
 
-- `App.tsx` -- Root layout with header, sidebar, main panel, and status bar.
+- `App.tsx` -- Root layout with import toggle, document selection, and Q&A.
 - `DocumentList` -- Sidebar listing of imported documents.
-- `DocumentDetail` -- Shows document metadata, chunks, and indexing controls.
+- `DocumentDetail` -- Shows metadata, full content, chunks, and delete button.
 - `ImportPanel` -- File input for importing .txt and .md documents.
 - `QuestionPanel` -- Text input for asking questions.
 - `StatusBar` -- Shows index status and document count.
 
-**Key invariant**: Renderer code never imports `fs`, `path`, `electron`, or any Node.js module.
-
 ### Services (`src/services/`)
 
-Business logic classes running in the main process:
-
 - `PersistenceService` -- Low-level JSON/text file I/O with atomic writes.
-- `DocumentService` -- Document CRUD operations (import, list, get, update, delete).
-- `IndexingService` -- Paragraph-aware chunking (~500 chars per chunk) and index management.
-- `QaService` -- Mock question answering with keyword-based retrieval and citation generation.
+- `DocumentService` -- Document CRUD with content storage and cleanup.
+- `IndexingService` -- Paragraph-aware chunking (~500 chars) and index management.
+- `QaService` -- Mock Q&A with keyword-based retrieval and citations.
 
-**Key invariant**: Services may import shared types but never renderer code.
+## Import Flow
 
-## Data Flow
+The document import flow demonstrates the full IPC data path:
 
-1. User interacts with a React component (e.g., clicks "Ask").
-2. Component calls `window.knowledgeBase.qa.ask(question)`.
-3. Preload bridge invokes `ipcRenderer.invoke('qa:ask', question)`.
-4. Main process IPC handler delegates to `QaService.ask()`.
-5. QaService retrieves chunks, scores by keyword overlap, generates answer.
-6. Response flows back through IPC to the renderer.
-7. React component updates state and re-renders.
+```
+1. User clicks "Import" button in App.tsx
+2. ImportPanel renders file input
+3. User selects a .txt or .md file
+4. ImportPanel resolves the filesystem path with
+   window.knowledgeBase.documents.pathForFile(file)
+   Preload calls Electron webUtils.getPathForFile. The sandboxed renderer
+   does not expose File.path.
+5. ImportPanel calls onImport(filePath)
+6. App.tsx calls window.knowledgeBase.documents.import(filePath)
+7. Preload bridge invokes ipcRenderer.invoke('documents:import', filePath)
+8. ipc-handlers.ts delegates to DocumentService.importDocument(filePath)
+9. DocumentService:
+   a. Validates the path is an existing file, the extension is .txt or .md,
+      and the size is at most 10 MB
+   b. Reads file content and stats
+   c. Creates Document metadata object
+   d. Copies file to documents directory via PersistenceService
+   e. Stores extracted text content via PersistenceService
+   f. Appends to documents-meta.json
+10. Result flows back through IPC
+11. App.tsx calls refreshDocuments() to update the list
+12. DocumentList re-renders with the new document
+```
 
-## Build Pipeline
+Unsupported files and files over 10 MB fail in the import panel. The library is left unchanged.
 
-1. `tsc -p tsconfig.node.json` compiles main, preload, shared, and services to `dist/`.
-2. `vite build` bundles the renderer React app to `dist/renderer/`.
-3. Electron loads `dist/main/main.js` as the entry point.
+## Startup Load
+
+`App` calls `refreshDocuments()` on mount. That calls `documents.list()`, and `DocumentService` reads `documents-meta.json` from `userData/knowledge-base-data`. Imported documents are still listed after a restart.
+
+## Delete Flow
+
+```
+1. User clicks Delete in DocumentDetail
+2. App calls window.knowledgeBase.documents.delete(id)
+3. DocumentService removes documents/<filename>, content/<id>.txt,
+   and the metadata entry
+4. App clears the selection when it matches and refreshes the list
+```
+
+## Content Retrieval Flow
+
+Document content viewing adds a dedicated IPC channel:
+
+```
+1. User clicks "View Content" in DocumentDetail
+2. DocumentDetail calls window.knowledgeBase.documents.getContent(id)
+3. Preload invokes 'documents:get-content' IPC
+4. ipc-handlers delegates to DocumentService.getDocumentContent(id)
+5. PersistenceService reads content/<id>.txt
+6. Content flows back to renderer for display in pre-wrap container
+```
 
 ## Data Storage
-
-All user data is stored under `app.getPath('userData')/knowledge-base-data/`:
 
 ```
 knowledge-base-data/

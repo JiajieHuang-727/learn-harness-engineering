@@ -2,15 +2,17 @@
 
 ## What Is This?
 
-A desktop application for managing a personal knowledge base. Users import text and Markdown documents, the system indexes them into searchable chunks, and a question-answering interface provides grounded answers with citations.
+A desktop application for managing a personal knowledge base. Users import text and Markdown documents via a file picker, view document content, and the system indexes them into searchable chunks for grounded Q&A with citations.
 
 ## Core Features
 
 ### Document Management
-- Import `.txt` and `.md` files into a local data store.
+- Import `.txt` and `.md` files through a file picker in the ImportPanel.
+- Reject other formats and files larger than 10 MB, and show the error in the import panel without changing the library.
 - View document metadata: title, filename, size, import date, indexing status.
+- View full document content in a scrollable text viewer.
 - Browse a list of all imported documents in a sidebar panel.
-- Delete documents and their associated data.
+- Delete documents and their associated data (content file, original copy).
 
 ### Text Indexing
 - Split documents into ~500-character chunks at paragraph boundaries.
@@ -24,34 +26,30 @@ A desktop application for managing a personal knowledge base. Users import text 
 - Confidence scores indicate answer reliability (0.85 with citations, 0.30 without).
 - Full Q&A history is persisted across sessions.
 
+### Persistence
+- All imported documents persist across application restarts.
+- Document list loads automatically on application startup.
+- Data stored locally in the user's application data directory.
+
 ### Status Bar
 - Real-time display of index status (idle, indexing, ready, error).
 - Document count and last activity timestamp.
 
-## Technical Requirements
-
-- Runs as a desktop application via Electron.
-- No external API dependencies -- all processing is local.
-- TypeScript throughout with strict mode.
-- React 18 for the UI with a dark theme.
-- Data stored locally in the user's application data directory.
-
 ## User Interface
-
-The interface has a three-panel layout:
 
 ```
 +------------------+----------------------------------------+
 | Header           |                                Refresh |
 +------------------+----------------------------------------+
-| Document List    | Document Detail / Welcome              |
-| (sidebar)        |                                        |
-|                  | Q&A Response                           |
-| [+ Import]       |                                        |
+| Document List    | ImportPanel / Document Detail          |
+| (sidebar)        |   - View Content button                |
+|                  |   - Show Chunks toggle                 |
+| [+ Import]       |   - Index Document button              |
+|                  |   - Delete button                      |
 +------------------+----------------------------------------+
 | Question Input                              [Ask]         |
 +-----------------------------------------------------------+
-| Status: idle | Documents: 0                                |
+| Status: idle | Documents: N                                |
 +-----------------------------------------------------------+
 ```
 
