@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Document, Chunk } from '../../../shared/types';
+import { useEffect, useState } from 'react';
+import { Document, Chunk } from '../../shared/types';
 
 interface Props {
   document: Document;
@@ -10,13 +10,31 @@ export function DocumentDetail({ document, onDelete }: Props) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [showChunks, setShowChunks] = useState(false);
   const [content, setContent] = useState<string | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
 
   useEffect(() => {
-    window.knowledgeBase.indexing.chunks(document.id).then(setChunks);
-  }, [document.id]);
+    let active = true;
+    setContent(null);
+    setContentError(null);
 
-  // TODO: Load document content for viewing -- not yet implemented
-  // This is part of the document-detail feature to be completed.
+    window.knowledgeBase.indexing.chunks(document.id).then(loaded => {
+      if (active) setChunks(loaded);
+    });
+
+    window.knowledgeBase.documents
+      .getContent(document.id)
+      .then(text => {
+        if (active) setContent(text ?? '');
+      })
+      .catch(err => {
+        if (!active) return;
+        setContentError(err instanceof Error ? err.message : 'Failed to load content');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [document.id]);
 
   return (
     <div>
@@ -80,20 +98,18 @@ export function DocumentDetail({ document, onDelete }: Props) {
         )}
       </div>
 
-      {/* Content viewer -- placeholder until document-detail feature is implemented */}
-      {content && (
-        <div style={{
-          padding: '16px',
-          background: '#1a1a3e',
-          borderRadius: '6px',
-          border: '1px solid #0f3460',
-          fontSize: '13px',
-          lineHeight: 1.6,
-          whiteSpace: 'pre-wrap',
-        }}>
-          {content}
-        </div>
-      )}
+      <div style={{
+        padding: '16px',
+        background: '#1a1a3e',
+        borderRadius: '6px',
+        border: '1px solid #0f3460',
+        fontSize: '13px',
+        lineHeight: 1.6,
+        whiteSpace: 'pre-wrap',
+        marginBottom: '16px',
+      }}>
+        {contentError ?? (content === null ? 'Loading content...' : content)}
+      </div>
 
       {showChunks && (
         <div>

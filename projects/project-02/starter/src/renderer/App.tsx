@@ -1,32 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { ImportPanel } from './components/ImportPanel';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
-
-declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
-        get: (id: string) => Promise<Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
-        status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
-      };
-      qa: {
-        ask: (question: string) => Promise<QAResponse>;
-        history: () => Promise<Array<{ question: string; response: QAResponse }>>;
-      };
-    };
-  }
-}
+import { Document, AppStatus, QAResponse } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -44,20 +22,24 @@ export function App() {
       const docs = await window.knowledgeBase.documents.list();
       setDocuments(docs);
       const status = await window.knowledgeBase.indexing.status();
-      setAppStatus(status);
+      setAppStatus({
+        ...status,
+        documentsLoaded: docs.length,
+      });
     } catch (err) {
       console.error('Failed to refresh documents:', err);
     }
   }, []);
 
+  useEffect(() => {
+    void refreshDocuments();
+  }, [refreshDocuments]);
+
   const handleImport = useCallback(async (filePath: string) => {
-    try {
-      await window.knowledgeBase.documents.import(filePath);
-      await refreshDocuments();
-      setShowImport(false);
-    } catch (err) {
-      console.error('Import failed:', err);
-    }
+    const doc = await window.knowledgeBase.documents.import(filePath);
+    setSelectedDoc(doc);
+    await refreshDocuments();
+    setShowImport(false);
   }, [refreshDocuments]);
 
   const handleSelectDocument = useCallback((doc: Document) => {

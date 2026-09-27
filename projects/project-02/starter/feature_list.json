@@ -38,25 +38,25 @@
       "id": "document-import",
       "name": "Document Import",
       "description": "Users can import .txt and .md files via ImportPanel with file picker",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "ImportPanel resolves the selected or dropped file with webUtils.getPathForFile, then IPC documents:import stores .txt/.md files up to 10 MB via DocumentService.",
+      "testedAt": "2026-09-26T15:20:00Z"
     },
     {
       "id": "document-detail",
       "name": "Document Detail with Content",
       "description": "DocumentDetail shows full document content, metadata, and delete button",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "DocumentDetail loads full text through IPC documents:get-content and renders metadata plus the delete button.",
+      "testedAt": "2026-09-26T15:20:00Z"
     },
     {
       "id": "basic-persistence",
       "name": "Basic Persistence",
       "description": "Imported documents persist across app restarts via filesystem storage",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "status": "pass",
+      "evidence": "Import writes documents-meta.json and content/<id>.txt with a temp file then rename. A new DocumentService on the same data directory restores metadata and full text. The window loads that list on startup. Delete removes the metadata entry and the stored content.",
+      "testedAt": "2026-09-26T15:23:00Z"
     }
   ]
 }

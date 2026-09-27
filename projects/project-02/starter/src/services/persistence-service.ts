@@ -26,12 +26,9 @@ export class PersistenceService {
     return JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
   }
 
-  /** Write a JSON file atomically. */
+  /** Write a JSON file atomically (temp file, then rename). */
   writeJson<T>(relativePath: string, data: T): void {
-    const fullPath = path.join(this.dataDir, relativePath);
-    const dir = path.dirname(fullPath);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2), 'utf-8');
+    this.writeAtomic(relativePath, JSON.stringify(data, null, 2));
   }
 
   /** Read a text file. */
@@ -41,12 +38,34 @@ export class PersistenceService {
     return fs.readFileSync(fullPath, 'utf-8');
   }
 
-  /** Write a text file. */
+  /** Write a text file atomically (temp file, then rename). */
   writeText(relativePath: string, content: string): void {
+    this.writeAtomic(relativePath, content);
+  }
+
+  /** Delete a file under the data directory. Missing files are ignored. */
+  deleteFile(relativePath: string): void {
+    const fullPath = path.join(this.dataDir, relativePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+
+  private writeAtomic(relativePath: string, content: string): void {
     const fullPath = path.join(this.dataDir, relativePath);
     const dir = path.dirname(fullPath);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, content, 'utf-8');
+    const tempPath = path.join(
+      dir,
+      `.${path.basename(fullPath)}.${process.pid}.${Date.now()}.tmp`,
+    );
+    fs.writeFileSync(tempPath, content, 'utf-8');
+    try {
+      fs.renameSync(tempPath, fullPath);
+    } catch (error) {
+      fs.rmSync(tempPath, { force: true });
+      throw error;
+    }
   }
 
   /** Copy a file into the documents directory. */
