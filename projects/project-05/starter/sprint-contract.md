@@ -73,10 +73,14 @@ Long answers and long excerpts wrap and remain readable inside the scrolling pan
 | File | Allowed change |
 |------|----------------|
 | `src/renderer/components/ConversationHistory.tsx` | Replace the placeholder. |
-| `src/renderer/App.tsx` | Pass `onFollowUp={handleAskQuestion}`. No other behavior change. |
-| `sprint-contract.md` | Generator and evaluator append the sprint log only. |
+| `src/renderer/App.tsx` | Pass `onFollowUp={handleAskQuestion}`. Correct the shared-type import. Remove the duplicate `window.knowledgeBase` declaration so `src/renderer/types.d.ts` stays the only one. Keep the transcript inside the left column with `minHeight: 0` and `overflow: hidden`. |
+| `src/renderer/components/DocumentDetail.tsx` | Correct the shared-type import and drop the unused React default import. No behavior change. |
+| `src/renderer/components/DocumentList.tsx` | Correct the shared-type import and drop the unused React default import. No behavior change. |
+| `src/renderer/components/StatusBar.tsx` | Correct the shared-type import and drop the unused React default import. No behavior change. |
+| `src/renderer/components/ImportPanel.tsx` | Drop the unused React default import. Read Electron `File.path` as an optional typed field. No behavior change. |
+| `sprint-contract.md` | Record this baseline allowlist, and append the sprint log. |
 
-Do not change services, preload, IPC handlers, persistence, architecture checks, or sample documents. Display formatting in the renderer is allowed. New Node imports in the renderer are not.
+These extra renderer rows are the baseline repair already present in `fac1b10`. `npm run check` fails if they are reverted: the old imports resolve outside `src/shared`, unused React imports fail `noUnusedLocals`, and the duplicate window type hides `Chunk` fields. Do not change services, preload, IPC handlers, persistence, architecture checks, or sample documents. Display formatting in the renderer is allowed. New Node imports in the renderer are not.
 
 ## Task Order
 
@@ -127,6 +131,22 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 | Planning | Planner | Scope, file boundaries, task order, 10 acceptance criteria, and the unscored rubric are recorded. Implementation has not started. |
 | Generation | Generator | Transcript implemented. jsdom verification passed for checks 1–8. `npm run check`, `npm run build`, and `scripts/check-architecture.sh` passed. Electron window was not launched. |
 | Evaluation | Evaluator | Block on `fac1b10`. Checklist 1–9 reproduced by re-running the jsdom harness. Criterion 10 is partial: no throw in jsdom, window coverage not observed. Diff also edits `DocumentDetail.tsx`, `DocumentList.tsx`, `ImportPanel.tsx`, `StatusBar.tsx`, and `App.tsx` beyond `onFollowUp`. Scores are in `evaluator-rubric.md`. |
+| Revision | Generator | File table now names the `fac1b10` baseline renderer repairs. Electron History tab opened with a long answer and a malformed item. The transcript scrolls inside the 280px column and the window content does not grow. |
+
+## Revision Evidence
+
+Electron was launched from the built app with a temporary user-data directory and a seeded `qa-history.json`: two normal exchanges on Oct 11 09:05 and Oct 12 14:30, a 2500-character unbroken answer plus wrapped words, one item with no `response`, and one item whose timestamp is `not-a-date`. The History tab was opened in the BrowserWindow. DevTools measurements:
+
+- Order is oldest first: `Older question`, `How does indexing work?`, `Missing response`, `Bad clock`.
+- User bubble: `justify-content: flex-end`, background `rgb(83, 52, 131)`.
+- Assistant bubble: `justify-content: flex-start`, background `rgb(26, 26, 62)`.
+- Separators visible in the window: `Oct 11`, `Oct 12`. Clocks: `09:05`, `14:30`, `--:--`, `--:--`.
+- The left column is 280px wide (`leftRight` 280). The transcript client height is 663 and its scroll height is 4258, so the long answer scrolls inside that column.
+- The long answer's right edge is at x=252, inside the column. The right-hand pane starts at x=280 and remains visible, including the ask box.
+- Content size stays 1200 by 772. Root height and `document.body.scrollHeight` are both 772, equal to `window.innerHeight`. The BrowserWindow was created at 1200 by 800; the 28px difference is the title bar. The page does not grow past the content area and does not cover the rest of the window.
+- All four exchanges stay mounted. The missing response shows `Answer unavailable`. The bad timestamp shows `Shown anyway` and `--:--`.
+
+The jsdom harness from the first generation is still outside the repo. This Electron run is the check the review asked to repeat for order, colors, and window coverage.
 
 ## Generation Evidence
 
