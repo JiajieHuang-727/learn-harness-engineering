@@ -44,3 +44,4 @@
 
 | Phase | Outcome |
 |-------|---------|
+| Implementation | Conversation history renders bubbles, full answers, `HH:MM` timestamps, local-day separators, collapsed citations, copy labels, follow-ups, and empty guidance. `npm test` (10), `npm run check`, and `bash scripts/check-architecture.sh` passed. |
