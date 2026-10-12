@@ -1,36 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { ConversationHistory } from './components/ConversationHistory';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse, QAHistory } from '../../shared/types';
-
-declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
-        get: (id: string) => Promise<Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
-        status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
-      };
-      qa: {
-        ask: (question: string) => Promise<QAResponse>;
-        history: () => Promise<QAHistory[]>;
-        clearHistory: () => Promise<void>;
-      };
-      conversation: {
-        get: () => Promise<QAHistory[]>;
-      };
-    };
-  }
-}
+import { Document, AppStatus, QAResponse, QAHistory } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -114,14 +88,17 @@ export function App() {
         </button>
       </header>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         {/* Left panel: Document list + Conversation tabs */}
         <div style={{
           width: '280px',
+          minWidth: 0,
+          minHeight: 0,
           borderRight: '1px solid #0f3460',
           display: 'flex',
           flexDirection: 'column',
           background: '#16213e',
+          overflow: 'hidden',
         }}>
           <div style={{
             display: 'flex',
@@ -189,7 +166,10 @@ export function App() {
               />
             </>
           ) : (
-            <ConversationHistory history={conversationHistory} />
+            <ConversationHistory
+              history={conversationHistory}
+              onFollowUp={handleAskQuestion}
+            />
           )}
         </div>
 

@@ -125,3 +125,21 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 | Phase | Agent | Outcome |
 |-------|-------|---------|
 | Planning | Planner | Scope, file boundaries, task order, 10 acceptance criteria, and the unscored rubric are recorded. Implementation has not started. |
+| Generation | Generator | Transcript implemented. jsdom verification passed for checks 1–8. `npm run check`, `npm run build`, and `scripts/check-architecture.sh` passed. Electron window was not launched. |
+
+## Generation Evidence
+
+Baseline `npm run check` failed before this work. Renderer imports pointed at `starter/shared/types` instead of `src/shared/types`, so the bundle could not resolve. Unused `React` imports failed `noUnusedLocals`. `ImportPanel` read `File.path`, which is not on the DOM `File` type. `App.tsx` also declared a second `window.knowledgeBase` whose `chunks` result omitted `Chunk` fields and disagreed with `src/renderer/types.d.ts`. Those were corrected before the feature could typecheck. `types.d.ts` remains the window API. No service, preload, IPC, or persistence files were changed.
+
+`App` passes `onFollowUp={handleAskQuestion}`. That handler still calls `window.knowledgeBase.qa.ask` and then `refreshHistory`. The left panel uses `minHeight: 0` and `overflow: hidden` so the transcript scrolls inside the 280px column.
+
+Verification ran in jsdom with the renderer components, not in a launched Electron window. Results:
+
+1. Two exchanges render oldest first. User bubbles are `flex-end` / `#533483` (`rgb(83, 52, 131)`). Assistant bubbles are `flex-start` / `#1a1a3e` (`rgb(26, 26, 62)`). A 4034-character answer is present in full.
+2. Local clocks for 09:05 and 14:30, and for a same-day pair 09:05 and 18:40, match `HH:MM`.
+3. Separators read `Oct 11` and `Oct 12` when the local days differ. A same-day pair has only the first separator, `Oct 11`.
+4. An answer with no citations has no citation control. Expanding `1 citation` shows `Design Notes`, `Chunk 3`, and the full 2514-character excerpt. `Hide citations` removes that block.
+5. Copy writes that full answer and nothing from the question or excerpt. The label becomes `Copied!` and returns to `Copy` on its own.
+6. The older exchange has no suggestions. The latest has three, derived from `How does indexing work?`. Clicking one calls `onFollowUp` with `Tell me more about How does indexing work`. Mounting `App`, opening History, and clicking that suggestion calls `qa.ask` with the same string and reads conversation history again (`reads 2 after 1`).
+7. Empty history shows the chat icon and `Ask a question to get started`, with no bubbles.
+8. A long answer wraps (`white-space: pre-wrap; overflow-wrap: anywhere`) inside a vertical scroller. A missing `response`, an empty answer, a non-array `citations`, an unparseable timestamp, and a null item leave the list mounted. Broken fields show `Answer unavailable` or `--:--`.
