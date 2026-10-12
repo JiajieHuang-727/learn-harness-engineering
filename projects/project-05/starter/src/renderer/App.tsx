@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { ConversationHistory } from './components/ConversationHistory';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse, QAHistory } from '../../shared/types';
+import { Document, AppStatus, QAResponse, QAHistory, Chunk } from '../shared/types';
 
 declare global {
   interface Window {
@@ -18,7 +18,7 @@ declare global {
       indexing: {
         start: (documentId?: string) => Promise<{ status: string }>;
         status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
+        chunks: (documentId: string) => Promise<Chunk[]>;
       };
       qa: {
         ask: (question: string) => Promise<QAResponse>;
@@ -189,7 +189,11 @@ export function App() {
               />
             </>
           ) : (
-            <ConversationHistory history={conversationHistory} />
+            <ConversationHistory
+              history={conversationHistory}
+              onSelect={(item) => setLastResponse(item.response)}
+              onFollowUp={handleAskQuestion}
+            />
           )}
         </div>
 
