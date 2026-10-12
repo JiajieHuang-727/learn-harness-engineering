@@ -132,6 +132,7 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 | Generation | Generator | Transcript implemented. jsdom verification passed for checks 1–8. `npm run check`, `npm run build`, and `scripts/check-architecture.sh` passed. Electron window was not launched. |
 | Evaluation | Evaluator | Block on `fac1b10`. Checklist 1–9 reproduced by re-running the jsdom harness. Criterion 10 is partial: no throw in jsdom, window coverage not observed. Diff also edits `DocumentDetail.tsx`, `DocumentList.tsx`, `ImportPanel.tsx`, `StatusBar.tsx`, and `App.tsx` beyond `onFollowUp`. Scores are in `evaluator-rubric.md`. |
 | Revision | Generator | File table now names the `fac1b10` baseline renderer repairs. Electron History tab opened with a long answer and a malformed item. The transcript scrolls inside the 280px column and the window content does not grow. |
+| Evaluation 2 | Evaluator | Accept on `4eb24e5`. Re-launched Electron against the seeded history. Measurements match the revision log: column 280, transcript 663/4258, content 1200×772, four exchanges mounted, right pane still visible. Scores are in `evaluator-rubric.md`. |
 
 ## Revision Evidence
 
