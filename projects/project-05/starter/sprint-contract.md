@@ -126,6 +126,7 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 |-------|-------|---------|
 | Planning | Planner | Scope, file boundaries, task order, 10 acceptance criteria, and the unscored rubric are recorded. Implementation has not started. |
 | Generation | Generator | Transcript implemented. jsdom verification passed for checks 1–8. `npm run check`, `npm run build`, and `scripts/check-architecture.sh` passed. Electron window was not launched. |
+| Evaluation | Evaluator | Block on `fac1b10`. Checklist 1–9 reproduced by re-running the jsdom harness. Criterion 10 is partial: no throw in jsdom, window coverage not observed. Diff also edits `DocumentDetail.tsx`, `DocumentList.tsx`, `ImportPanel.tsx`, `StatusBar.tsx`, and `App.tsx` beyond `onFollowUp`. Scores are in `evaluator-rubric.md`. |
 
 ## Generation Evidence
 
