@@ -133,6 +133,19 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 | Evaluation | Evaluator | Block on `fac1b10`. Checklist 1–9 reproduced by re-running the jsdom harness. Criterion 10 is partial: no throw in jsdom, window coverage not observed. Diff also edits `DocumentDetail.tsx`, `DocumentList.tsx`, `ImportPanel.tsx`, `StatusBar.tsx`, and `App.tsx` beyond `onFollowUp`. Scores are in `evaluator-rubric.md`. |
 | Revision | Generator | File table now names the `fac1b10` baseline renderer repairs. Electron History tab opened with a long answer and a malformed item. The transcript scrolls inside the 280px column and the window content does not grow. |
 | Evaluation 2 | Evaluator | Accept on `4eb24e5`. Re-launched Electron against the seeded history. Measurements match the revision log: column 280, transcript 663/4258, content 1200×772, four exchanges mounted, right pane still visible. Scores are in `evaluator-rubric.md`. |
+| Revision 2 | Generator | Closed the Electron gaps from Evaluation 2 without changing `ConversationHistory.tsx`, the `onFollowUp` wiring, or the history file format. Citations, copy, follow-ups, the same-day separator, and the empty History tab were exercised in the BrowserWindow. |
+
+## Revision 2 Evidence
+
+A fresh Electron window used a temporary user-data directory. The seed had two Oct 11 exchanges (`09:05` and `18:40`) and one Oct 12 exchange (`14:30`). The morning answer had no citations. The evening answer cited `Design Notes`, chunk 3, excerpt `EXCERPT-START full citation excerpt must stay intact EXCERPT-END`. The latest question was `How does indexing work?`.
+
+- Separators were only `Oct 11` and `Oct 12`. The same-day pair did not get a second separator. Clocks were `09:05`, `18:40`, `14:30`.
+- Citation controls were absent, present, absent across the three exchanges. The list was closed. Clicking `1 citation` showed `Design Notes`, `Chunk 3`, and the full excerpt, and the control read `Hide citations`. Clicking it again removed the excerpt block.
+- Copy on the morning bubble wrote `Morning answer that must stay complete` to the clipboard. The label became `Copied!` and returned to `Copy` on its own.
+- Follow-up counts were `0, 0, 3`. Clicking `Tell me more about How does indexing work` called the existing ask path: `qa-history.json` gained that exact question, and the answer was the indexing mock from `QaService`. The window then showed four user bubbles, and follow-ups moved to only the new latest exchange (`0, 0, 0, 3`). The right-hand last-answer card showed the same new answer.
+- A second fresh window with an empty history file showed History (0), the chat icon, and `No conversation yet. Ask a question to get started.` Bubble count was 0 and the transcript log was absent.
+
+No product source changed in this revision. `npm run check` was not affected.
 
 ## Revision Evidence
 
