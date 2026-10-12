@@ -134,6 +134,7 @@ The generator runs these checks and writes the evidence in the sprint log. The e
 | Revision | Generator | File table now names the `fac1b10` baseline renderer repairs. Electron History tab opened with a long answer and a malformed item. The transcript scrolls inside the 280px column and the window content does not grow. |
 | Evaluation 2 | Evaluator | Accept on `4eb24e5`. Re-launched Electron against the seeded history. Measurements match the revision log: column 280, transcript 663/4258, content 1200×772, four exchanges mounted, right pane still visible. Scores are in `evaluator-rubric.md`. |
 | Revision 2 | Generator | Closed the Electron gaps from Evaluation 2 without changing `ConversationHistory.tsx`, the `onFollowUp` wiring, or the history file format. Citations, copy, follow-ups, the same-day separator, and the empty History tab were exercised in the BrowserWindow. |
+| Evaluation 3 | Evaluator | Accept on `0268bf5`. Re-ran the Electron gap script. Same-day clocks `09:05`, `18:40`, `14:30`; separators only `Oct 11` and `Oct 12`; citation expand/collapse; copy of the morning answer; follow-up wrote that exact question through `QaService`; empty History showed the icon and guidance. Scores are in `evaluator-rubric.md`. |
 
 ## Revision 2 Evidence
 
