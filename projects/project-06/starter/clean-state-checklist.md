@@ -1,68 +1,49 @@
 # Clean State Checklist
 
-Run this checklist before committing and at the end of each session.
+Run this before committing and at the end of a session.
 
 ## Build
 
 - [ ] `npm run check` passes with no type errors
-- [ ] `npm run build` completes successfully
-- [ ] No TypeScript warnings about unused variables or imports
+- [ ] `npm run build` completes
+- [ ] No unused variables or imports in the type check
 
 ## Architecture
 
-- [ ] No `fs` or `path` imports in renderer code (`src/renderer/`)
-- [ ] No Electron IPC in service code (`src/services/`)
-- [ ] No React imports in services or main process
-- [ ] All IPC channels defined in `src/shared/types.ts`
-- [ ] All new APIs exposed in `src/preload/preload.ts`
+- [ ] No `fs` or `path` imports in `src/renderer/`
+- [ ] No Electron IPC imports in `src/services/`
+- [ ] No React imports in services or the main process
+- [ ] IPC channel names live only in `src/shared/types.ts`
+- [ ] APIs used by the renderer are exposed in `src/preload/preload.ts`
+- [ ] Renderer imports of `shared/types` resolve under `src/shared/`
 
 ## Runtime
 
-- [ ] Application starts without errors (`npm run dev`)
-- [ ] Structured JSON log output appears in console at startup
-- [ ] Document import works (check logs for "Document imported" event)
-- [ ] Batch indexing works (check logs for "Batch indexing complete" event)
-- [ ] Q&A returns answers with citations (check logs for "Answer generated" event)
-- [ ] Conversation history displays in chat-style layout
-- [ ] Feedback buttons appear on Q&A responses
-- [ ] Reset button clears all data with confirmation dialog
-- [ ] Status bar shows correct document count and index status
+- [ ] `npm run dev` opens the window
+- [ ] Startup prints a JSON line, `Data directories initialized`, with the data directory
+- [ ] Import opens a file dialog. A `.md` file with a heading uses that heading as the title
+- [ ] Index Document sets status to `indexed`, writes `index-meta.json`, and the chunk list shows non-empty chunks without reopening the document
+- [ ] The indexing question returns text about paragraph boundaries or about 500 characters, a `Retrieval Plan` citation, and 85% confidence
+- [ ] Show History lists that question after it has been asked
+- [ ] Delete removes the document from the list
+- [ ] The status bar shows an index state and the document count
 
 ## Logging
 
-- [ ] All log entries are valid JSON (parseable)
-- [ ] Log entries include timestamp, level, service, and message
-- [ ] Document import emits INFO log with documentId, filename, size
-- [ ] Indexing emits INFO log with chunkCount, durationMs
-- [ ] Q&A emits INFO log with confidence, citationCount, durationMs
-- [ ] IPC handlers log channel invocations
+- [ ] Log lines are single JSON objects with `timestamp`, `level`, `service`, and `message`
+- [ ] Import logs `Document imported` or `IPC: IMPORT_DOCUMENT`
+- [ ] Index logs `Single document indexed` or `IPC: START_INDEXING`
+- [ ] A question logs `Answer generated` with `confidence` and `citationCount`, or `IPC: ASK_QUESTION`
 
-## Data Integrity
+## Data
 
-- [ ] No empty chunks in indexed documents (verify with GET_CHUNKS)
-- [ ] Q&A history persists across restarts
-- [ ] Feedback entries persist across restarts
-- [ ] Document metadata is consistent with actual files
-- [ ] Clean state reset removes all data files
-
-## Performance
-
-- [ ] `bash scripts/benchmark.sh` runs without errors
-- [ ] Import throughput is reasonable (3 files under 1 second)
-- [ ] Indexing completes for sample data (under 1 second)
-- [ ] Query latency is under 1 second per question
+- [ ] After delete, `content/<id>.txt`, `chunks/<id>.json`, and the `index-meta.json` entry for that id are gone
+- [ ] Quit and relaunch keeps the remaining documents and `qa-history.json`
+- [ ] A clean run starts from an empty list after the data directory from the startup log is deleted
 
 ## Repository
 
-- [ ] No unintended files in git status
-- [ ] No sensitive data (.env, credentials) staged
-- [ ] No files in `dist/` committed
-- [ ] `claude-progress.md` updated with current state
-- [ ] `feature_list.json` reflects actual feature status
-- [ ] `session-handoff.md` updated if session is ending
-
-## Scripts
-
-- [ ] `bash scripts/cleanup-scanner.sh` reports no stale artifacts
-- [ ] `bash scripts/benchmark.sh` completes the full task suite
-- [ ] `bash init.sh` passes all verification steps
+- [ ] `git status` has no unintended files
+- [ ] `dist/` is not committed
+- [ ] `feature_list.json` matches the code, including features that are still `fail`
+- [ ] `session-handoff.md` is updated when the session ends

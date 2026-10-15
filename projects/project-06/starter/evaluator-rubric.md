@@ -1,70 +1,40 @@
 # Evaluator Rubric -- Project 06 Capstone
 
-## Overall Assessment
+Scores are for this tree after the 2026-10-15 cleanup. 1 is absent, 5 is the behavior in `docs/PRODUCT.md` checked in the running app.
 
-**Project**: Runtime Observability and Debugging (Capstone)
-**Evaluator**: Automated + Manual Review
-**Date**: 2026-03-30
-
-### Scoring (1-5 scale)
+The earlier 5.0 score described channels, feedback, reset, chat history, and scripts this tree did not have.
 
 | Criterion | Score | Notes |
 |-----------|-------|-------|
-| **Build & Compile** | 5 | Clean TypeScript compilation. No errors, no warnings. |
-| **Window Launch** | 5 | 1200x800 window with secure webPreferences. Preload bridge working. |
-| **Document Import** | 5 | File validation (size, existence). Metadata creation. Content storage. Logging. |
-| **Document Detail** | 5 | Full metadata display. Chunk viewer. Index button. Delete with confirmation. |
-| **Text Indexing** | 5 | Paragraph-aware chunking. Batch and single modes. Status tracking. Doc status updates. |
-| **Grounded Q&A** | 5 | Keyword retrieval. Citations with excerpts. Confidence scoring. 8 answer patterns. |
-| **Conversation History** | 5 | Chat bubbles. Expandable citations. Confidence colors. Timestamps. Clear history. |
-| **Feedback Collection** | 5 | Positive/negative ratings. Persistent storage. Per-response buttons. List API. |
-| **Structured Logging** | 5 | JSON format. Log levels. Service tags. Data payloads. All services covered. |
-| **Clean State Reset** | 5 | Full data reset. Confirmation dialog. React state cleared. Idempotent. |
-| **Persistence** | 5 | Documents, chunks, history, feedback all persist. Auto-load on mount. |
-| **Status Bar** | 5 | Status indicator. Document count. Indexed count. Timestamp. |
-| **Benchmark Scripts** | 5 | Import/index/query timing. Structured output. Full task suite. |
-| **Cleanup Scanner** | 5 | Orphan detection. Metadata consistency. Stale artifact reporting. |
-| **Harness Completeness** | 5 | All 9 harness files present. 3 docs. 3 sample data files. |
+| Build & Compile | 5 | `npm run check` and `npm run build` pass |
+| Window Launch | 4 | 1200x800, context isolation, preload. Not relaunched in this pass |
+| Document Import | 4 | Dialog in the main process, 10 MB and extension checks, heading used as title. Service import of `retrieval-plan.md` returns `Retrieval Plan`. The dialog was not clicked in a window |
+| Document Detail | 4 | Metadata, chunk list, Index, Delete with confirmation. Delete cleanup checked on the service |
+| Text Indexing | 5 | Single-document index writes chunk JSON, `index-meta.json`, and `status: indexed`. The sample produced 5 non-empty chunks |
+| Grounded Q&A | 4 | The fixed indexing question returns the indexing pattern, confidence 0.85, and two `Retrieval Plan` citations. Checked through the services, not the window |
+| Conversation History | 3 | Flat list of saved Q&A with Clear History. No chat layout |
+| Feedback Collection | 1 | No feedback type, channel, or control |
+| Structured Logging | 4 | JSON logs on import, index, ask, and the read handlers. A live terminal was not captured in this pass |
+| Clean State Reset | 1 | No reset control. Empty the data directory by deleting the path from the startup log |
+| Persistence | 4 | Documents, chunks, index metadata, and Q&A history are files. Delete removes that document's files. Restart was not re-run |
+| Status Bar | 4 | `indexing.status()` returns `AppStatus` (`documentsLoaded`, `indexStatus`, `lastActivity`) |
+| Benchmark Scripts | 1 | No `scripts/benchmark.sh`. Manual tasks are `benchmark-tasks.md` |
+| Cleanup Scanner | 1 | No `scripts/cleanup-scanner.sh` |
+| Harness docs | 4 | `AGENTS.md`, `CLAUDE.md`, `feature_list.json`, `init.sh`, and `docs/` describe this tree |
 
-### Overall: 5.0 / 5
+## IPC Channels
 
-### Harness File Assessment
+10 channels, all registered and exposed:
 
-| File | Present | Quality | Notes |
-|------|---------|---------|-------|
-| AGENTS.md | Yes | Complete | Full startup rules, conventions, definition of done |
-| CLAUDE.md | Yes | Complete | Quick reference with all 14 IPC channels |
-| feature_list.json | Yes | Complete | 15 features, all pass with evidence |
-| init.sh | Yes | Complete | 5-step verification including harness files |
-| claude-progress.md | Yes | Complete | Session log with benchmark results |
-| session-handoff.md | Yes | Complete | Full handoff with decisions and files modified |
-| clean-state-checklist.md | Yes | Complete | 30 check items across 7 categories |
-| evaluator-rubric.md | Yes | Complete | This file |
-| quality-document.md | Yes | Complete | High grades across all dimensions |
+- `documents:list`, `documents:import`, `documents:get`, `documents:delete`
+- `indexing:start`, `indexing:status`, `indexing:chunks`
+- `qa:ask`, `qa:history`, `qa:clear-history`
 
-### Documentation Assessment
+## Not in this tree
 
-| File | Present | Quality | Notes |
-|------|---------|---------|-------|
-| docs/ARCHITECTURE.md | Yes | Complete | Full layer diagram, data flows, storage layout |
-| docs/PRODUCT.md | Yes | Complete | All features described with UI layout |
-| docs/RELIABILITY.md | Yes | Complete | Logging, clean state, benchmarking strategy |
-
-### IPC Channel Coverage
-
-14 channels registered, all with logging:
-
-- documents:list, documents:import, documents:get, documents:delete
-- indexing:start, indexing:status, indexing:chunks
-- qa:ask, qa:history, qa:clear-history
-- feedback:submit, feedback:list
-- app:reset
-- app:status
-
-### Summary
-
-This capstone project demonstrates a complete Electron knowledge base application
-with maximum harness quality. All features from Projects 01-05 are integrated and
-enhanced with structured logging, feedback collection, clean state management,
-and performance benchmarking. The harness is comprehensive with 9 top-level files,
-3 documentation files, 2 utility scripts, and 3 sample data files.
+- Feedback submit/list
+- `app:reset` and `app:status`
+- `conversation:get`
+- Chat bubbles, thumbs, and a header Reset button
+- `scripts/benchmark.sh`, `scripts/cleanup-scanner.sh`
+- Vitest tests

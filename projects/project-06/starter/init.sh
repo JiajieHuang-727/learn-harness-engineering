@@ -20,7 +20,7 @@ echo ""
 
 echo "[4/5] Verifying harness files..."
 FILES_OK=true
-for file in AGENTS.md CLAUDE.md feature_list.json clean-state-checklist.md session-handoff.md evaluator-rubric.md quality-document.md; do
+for file in AGENTS.md CLAUDE.md feature_list.json clean-state-checklist.md session-handoff.md evaluator-rubric.md quality-document.md benchmark-tasks.md; do
   if [ ! -f "$file" ]; then
     echo "  MISSING: $file"
     FILES_OK=false
@@ -38,14 +38,12 @@ for doc in docs/ARCHITECTURE.md docs/PRODUCT.md docs/RELIABILITY.md; do
   fi
 done
 
-for script in scripts/benchmark.sh scripts/cleanup-scanner.sh scripts/dev.js; do
-  if [ ! -f "$script" ]; then
-    echo "  MISSING: $script"
-    FILES_OK=false
-  else
-    echo "  OK: $script"
-  fi
-done
+if [ ! -f scripts/dev.js ]; then
+  echo "  MISSING: scripts/dev.js"
+  FILES_OK=false
+else
+  echo "  OK: scripts/dev.js"
+fi
 echo ""
 
 echo "[5/5] Verifying sample data..."
@@ -62,8 +60,7 @@ echo ""
 if [ "$FILES_OK" = true ]; then
   echo "=== Init complete. All checks passed. ==="
   echo "Run 'npm run dev' to launch the application."
-  echo "Run 'bash scripts/benchmark.sh' to run performance benchmarks."
-  echo "Run 'bash scripts/cleanup-scanner.sh' to check for stale artifacts."
+  echo "The manual task set is benchmark-tasks.md."
 else
   echo "=== Init complete with warnings. Some harness files are missing. ==="
   exit 1

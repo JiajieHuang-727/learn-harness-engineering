@@ -37,16 +37,6 @@ export interface QAHistory {
   response: QAResponse;
 }
 
-export interface ConversationMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  citations?: Citation[];
-  confidence?: number;
-  followUpSuggestions?: string[];
-}
-
 export interface AppStatus {
   documentsLoaded: number;
   indexStatus: 'idle' | 'indexing' | 'ready' | 'error';
@@ -70,10 +60,4 @@ export const IPC_CHANNELS = {
   ASK_QUESTION: 'qa:ask',
   GET_HISTORY: 'qa:history',
   CLEAR_HISTORY: 'qa:clear-history',
-
-  // Conversation
-  GET_CONVERSATION: 'conversation:get',
-
-  // App status
-  GET_STATUS: 'app:status',
 } as const;

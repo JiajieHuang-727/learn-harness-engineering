@@ -1,13 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { QAHistory } from '../../../shared/types';
+import { useEffect, useState } from 'react';
+import { QAHistory } from '../../shared/types';
 
-/**
- * ConversationHistory -- starter version.
- *
- * Displays Q&A history as a simple list.
- * The solution version adds chat bubbles, citation expansion,
- * follow-up suggestions, and feedback buttons.
- */
+/** Flat list of saved questions and answers. */
 export function ConversationHistory() {
   const [history, setHistory] = useState<QAHistory[]>([]);
 

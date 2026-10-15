@@ -1,8 +1,7 @@
-import { IpcMain } from 'electron';
+import { BrowserWindow, dialog, IpcMain, OpenDialogOptions, WebContents } from 'electron';
 import { DocumentService } from '../services/document-service';
 import { IndexingService } from '../services/indexing-service';
 import { QaService } from '../services/qa-service';
-import { PersistenceService } from '../services/persistence-service';
 import { IPC_CHANNELS } from '../shared/types';
 import { logger } from '../services/logger';
 
@@ -12,11 +11,10 @@ export interface Services {
   documentService: DocumentService;
   indexingService: IndexingService;
   qaService: QaService;
-  persistence: PersistenceService;
 }
 
 export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
-  const { documentService, indexingService, qaService, persistence } = services;
+  const { documentService, indexingService, qaService } = services;
 
   // Document operations
   ipcMain.handle(IPC_CHANNELS.LIST_DOCUMENTS, async () => {
@@ -24,9 +22,14 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
     return documentService.listDocuments();
   });
 
-  ipcMain.handle(IPC_CHANNELS.IMPORT_DOCUMENT, async (_event, filePath: string) => {
-    logger.info(SERVICE, 'IPC: IMPORT_DOCUMENT', { filePath });
-    return documentService.importDocument(filePath);
+  ipcMain.handle(IPC_CHANNELS.IMPORT_DOCUMENT, async (event, filePath?: string) => {
+    const resolvedPath = filePath || await pickDocument(event.sender);
+    if (!resolvedPath) {
+      logger.info(SERVICE, 'IPC: IMPORT_DOCUMENT canceled');
+      return null;
+    }
+    logger.info(SERVICE, 'IPC: IMPORT_DOCUMENT', { filePath: resolvedPath });
+    return documentService.importDocument(resolvedPath);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_DOCUMENT, async (_event, id: string) => {
@@ -46,6 +49,7 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_INDEXING_STATUS, async () => {
+    logger.debug(SERVICE, 'IPC: GET_INDEXING_STATUS');
     return indexingService.getStatus();
   });
 
@@ -61,6 +65,7 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_HISTORY, async () => {
+    logger.debug(SERVICE, 'IPC: GET_HISTORY');
     return qaService.getHistory();
   });
 
@@ -69,10 +74,19 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
     return qaService.clearHistory();
   });
 
-  // App status
-  ipcMain.handle(IPC_CHANNELS.GET_STATUS, async () => {
-    return indexingService.getStatus();
-  });
-
   logger.info(SERVICE, 'All IPC handlers registered');
+}
+
+async function pickDocument(sender: WebContents): Promise<string | null> {
+  const parent = BrowserWindow.fromWebContents(sender) ?? undefined;
+  const options: OpenDialogOptions = {
+    title: 'Import a document',
+    properties: ['openFile'],
+    filters: [{ name: 'Documents', extensions: ['txt', 'md'] }],
+  };
+  const picked = parent
+    ? await dialog.showOpenDialog(parent, options)
+    : await dialog.showOpenDialog(options);
+  if (picked.canceled || picked.filePaths.length === 0) return null;
+  return picked.filePaths[0];
 }

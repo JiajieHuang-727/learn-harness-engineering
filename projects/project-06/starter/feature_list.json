@@ -1,126 +1,126 @@
 {
   "project": "project-06",
-  "description": "Capstone: Runtime Observability and Debugging -- full product with import, index, Q&A, feedback, clean state, benchmarking",
+  "description": "Capstone knowledge base: import, index, cited Q&A, JSON logs. Feedback, in-app reset, and benchmark scripts are not in this tree.",
   "features": [
     {
       "id": "window-launch",
       "name": "Window Launch",
       "description": "Electron app opens a BrowserWindow with correct dimensions, preload script, and secure webPreferences",
       "status": "pass",
-      "evidence": "main.ts creates 1200x800 BrowserWindow with contextIsolation=true, nodeIntegration=false, and typed preload script",
-      "testedAt": "2026-03-30T10:00:00Z"
+      "evidence": "main.ts creates a 1200x800 BrowserWindow with contextIsolation=true, nodeIntegration=false, and the preload script. Development and packaged runs both load dist/renderer/index.html.",
+      "testedAt": "2026-10-15T12:16:00Z"
     },
     {
       "id": "document-list",
       "name": "Document List Panel",
-      "description": "Left sidebar shows imported documents with status indicators and empty state message",
+      "description": "Left sidebar shows imported documents with an Indexed marker and an empty state",
       "status": "pass",
-      "evidence": "DocumentList.tsx renders documents with status, size, and chunk count. Empty state shown when no documents imported.",
-      "testedAt": "2026-03-30T10:05:00Z"
+      "evidence": "DocumentList.tsx renders the title, size, and Indexed when status is indexed. Empty copy is shown when the list is empty.",
+      "testedAt": "2026-10-15T12:16:00Z"
     },
     {
       "id": "document-import",
       "name": "Document Import",
-      "description": "Users can import .txt and .md files via file picker. Documents appear in list with metadata. File validation (size limit).",
+      "description": "Import .txt and .md files. The Import button opens a native file dialog. Titles come from the first Markdown heading. Size limit is 10 MB.",
       "status": "pass",
-      "evidence": "DocumentService.importDocument() validates file existence, checks 10MB limit, copies file, stores content, creates metadata. ImportPanel triggers import via file input.",
-      "testedAt": "2026-03-30T10:15:00Z"
+      "evidence": "Import calls documents.import() with no path; ipc-handlers opens dialog.showOpenDialog. importDocument rejects other extensions and files over 10 MB. retrieval-plan.md imports as title Retrieval Plan. meeting-summary.txt imports as meeting-summary. Checked by constructing the services, 2026-10-15.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "document-detail",
       "name": "Document Detail with Delete",
-      "description": "DocumentDetail shows metadata, chunks, indexing controls, and delete button",
+      "description": "Detail shows metadata and chunks, indexes the document, and deletes it after confirmation",
       "status": "pass",
-      "evidence": "DocumentDetail.tsx shows full metadata, chunk viewer toggle, Index Document button, Delete button with confirmation dialog",
-      "testedAt": "2026-03-30T10:20:00Z"
+      "evidence": "DocumentDetail reloads chunks when status or chunk count changes, awaits indexing, and confirms before delete. deleteDocument removes the copy, content file, chunk file, and index-meta entry. The service delete was checked 2026-10-15; the confirm dialog was not clicked in a window.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "text-indexing",
       "name": "Text Indexing",
-      "description": "Documents are split into ~500 char chunks at paragraph boundaries. Indexing works for single docs and batch. Status tracking.",
+      "description": "Documents are split into ~500 character chunks at paragraph boundaries. Single and batch indexing write index-meta.json and set status to indexed.",
       "status": "pass",
-      "evidence": "IndexingService.chunkDocument() splits at paragraph boundaries with CHUNK_SIZE=500. startIndexing() handles single and batch modes. getStatus() returns current state. Document metadata updated to 'indexed'.",
-      "testedAt": "2026-03-30T10:30:00Z"
+      "evidence": "indexOne writes chunks/<id>.json, index-meta.json, and updateDocument({ status: indexed, chunks }). The retrieval-plan sample produced 5 non-empty chunks and status indexed.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "grounded-qa",
       "name": "Grounded Q&A with Citations",
-      "description": "Ask questions, get answers with citations and confidence scores. Keyword matching retrieval.",
+      "description": "Ask a question and get the best-matching mock answer, up to two citations, and a confidence score",
       "status": "pass",
-      "evidence": "QaService.ask() tokenizes question, scores chunks by keyword overlap, returns top 2 citations. Confidence 0.85 with citations, 0.30 without. 8 mock answer patterns.",
-      "testedAt": "2026-03-30T10:40:00Z"
+      "evidence": "bestPattern picks the pattern with the most keyword hits. The fixed indexing question returned the 500-character paragraph answer, confidence 0.85, and two Retrieval Plan citations.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "conversation-history",
       "name": "Conversation History",
-      "description": "Chat-style display of Q&A history with expandable citations, confidence indicators, timestamps, and feedback buttons",
+      "description": "Flat list of saved questions and answers, with citation count, confidence, timestamp, and Clear History",
       "status": "pass",
-      "evidence": "ConversationHistory.tsx renders user/assistant chat bubbles, expandable citations with toggle, confidence % with color coding, thumbs up/down feedback buttons, Clear History action",
-      "testedAt": "2026-03-30T10:50:00Z"
+      "evidence": "ConversationHistory loads qa.history() and clearHistory() empties the list. The ask path appends to qa-history.json. The list is not a chat layout and has no feedback buttons.",
+      "testedAt": "2026-10-15T12:16:00Z"
     },
     {
       "id": "feedback-collection",
       "name": "Feedback Collection",
-      "description": "Users can rate Q&A responses as positive/negative. Feedback persists across sessions.",
-      "status": "pass",
-      "evidence": "FeedbackEntry type in types.ts. QaService.submitFeedback() creates FeedbackEntry with id, qaTimestamp, question, rating, comment, submittedAt. IPC_CHANNELS.SUBMIT_FEEDBACK and GET_FEEDBACK registered. Preload exposes feedback.submit() and feedback.list().",
-      "testedAt": "2026-03-30T11:00:00Z"
+      "description": "Rate a Q&A response and keep that rating",
+      "status": "fail",
+      "evidence": "No FeedbackEntry type, no feedback IPC channel, and no rating control.",
+      "testedAt": "2026-10-15T12:20:00Z"
     },
     {
       "id": "structured-logging",
       "name": "Structured JSON Logging",
-      "description": "All services emit structured JSON log entries with timestamp, level, service tag, message, and optional data payload.",
+      "description": "Services emit JSON log lines with timestamp, level, service, message, and optional data",
       "status": "pass",
-      "evidence": "logger.ts provides Logger class with DEBUG/INFO/WARN/ERROR levels, JSON.stringify output, ServiceLogger child loggers. All 5 services (persistence, document, indexing, qa, ipc-handlers) use logger.forService() with structured data payloads.",
-      "testedAt": "2026-03-30T11:10:00Z"
+      "evidence": "logger.ts writes one JSON object per line. Import, index, and ask logged INFO lines in the service check. Read IPC handlers log at DEBUG. LOG_LEVEL filters by level.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "clean-state-reset",
       "name": "Clean State Reset",
-      "description": "Application supports resetting all data to clean state. Clears documents, chunks, Q&A history, and feedback.",
-      "status": "pass",
-      "evidence": "IPC_CHANNELS.RESET_DATA registered. PersistenceService.resetAll() removes data directory and recreates. App.tsx Reset button with confirmation dialog. Resets all React state after clear.",
-      "testedAt": "2026-03-30T11:20:00Z"
+      "description": "A control that deletes the data directory and returns the UI to empty",
+      "status": "fail",
+      "evidence": "No app:reset channel and no Reset button. The unused resetAll method was removed. Empty the library by deleting the directory printed in Data directories initialized.",
+      "testedAt": "2026-10-15T12:20:00Z"
     },
     {
       "id": "persistence",
       "name": "Full Persistence",
-      "description": "All data (documents, chunks, Q&A history, feedback) persists across application restarts.",
+      "description": "Documents, chunks, index metadata, and Q&A history are stored as files under the user-data directory",
       "status": "pass",
-      "evidence": "PersistenceService uses app.getPath('userData')/knowledge-base-data. App.tsx calls refreshDocuments() on mount via useEffect. QaService.getHistory() reads from qa-history.json. FeedbackEntry stored in feedback.json.",
-      "testedAt": "2026-03-30T11:25:00Z"
+      "evidence": "PersistenceService writes documents-meta.json, content/<id>.txt, documents/<filename>, chunks/<id>.json, index-meta.json, and qa-history.json. A restart of the window was not re-run in this pass.",
+      "testedAt": "2026-10-15T12:16:58Z"
     },
     {
       "id": "status-bar",
       "name": "Status Bar",
-      "description": "Real-time display of index status, document count, indexed count, and last activity timestamp.",
+      "description": "Shows index status, document count, and last import time",
       "status": "pass",
-      "evidence": "StatusBar.tsx shows colored status indicator, document count, indexed count, and formatted timestamp. Updated after document operations and Q&A.",
-      "testedAt": "2026-03-30T11:30:00Z"
+      "evidence": "IndexingService.getStatus returns AppStatus. StatusBar reads indexStatus, documentsLoaded, and lastActivity. The bar was not screenshotted in this pass.",
+      "testedAt": "2026-10-15T12:16:00Z"
     },
     {
       "id": "benchmark-scripts",
       "name": "Benchmark Scripts",
-      "description": "Performance benchmark suite measuring import throughput, indexing speed, query latency, and citation accuracy.",
-      "status": "pass",
-      "evidence": "scripts/benchmark.sh defines task suite with timing for import, index, query, and verify operations. Outputs structured results.",
-      "testedAt": "2026-03-30T11:40:00Z"
+      "description": "A shell suite for import, index, and query timing",
+      "status": "fail",
+      "evidence": "scripts/benchmark.sh is not in this tree. benchmark-tasks.md is the manual five-task set.",
+      "testedAt": "2026-10-15T12:20:00Z"
     },
     {
       "id": "cleanup-scanner",
       "name": "Cleanup Scanner",
-      "description": "Script that checks for stale artifacts: orphaned content files, dangling chunks, inconsistent metadata.",
-      "status": "pass",
-      "evidence": "scripts/cleanup-scanner.sh checks data directory for orphaned files, verifies metadata consistency, reports findings.",
-      "testedAt": "2026-03-30T11:45:00Z"
+      "description": "A script that reports orphaned content, chunks, and metadata",
+      "status": "fail",
+      "evidence": "scripts/cleanup-scanner.sh is not in this tree.",
+      "testedAt": "2026-10-15T12:20:00Z"
     },
     {
       "id": "full-harness",
-      "name": "Complete Harness",
-      "description": "All harness files present: AGENTS.md, CLAUDE.md, feature_list.json, init.sh, session-handoff.md, clean-state-checklist.md, evaluator-rubric.md, quality-document.md, docs/",
+      "name": "Harness files match the app",
+      "description": "AGENTS.md, CLAUDE.md, feature_list.json, init.sh, session-handoff.md, clean-state-checklist.md, evaluator-rubric.md, quality-document.md, and docs/ describe this tree",
       "status": "pass",
-      "evidence": "All files present and complete. init.sh verifies build. clean-state-checklist.md has 15 check items. docs/ has ARCHITECTURE.md, PRODUCT.md, RELIABILITY.md.",
-      "testedAt": "2026-03-30T11:50:00Z"
+      "evidence": "Those files are present. init.sh checks them plus scripts/dev.js and the three sample documents. It does not require benchmark or cleanup scripts.",
+      "testedAt": "2026-10-15T12:20:00Z"
     }
   ]
 }

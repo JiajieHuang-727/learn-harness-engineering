@@ -7,19 +7,16 @@ const SERVICE = 'persistence';
 export class PersistenceService {
   private dataDir: string;
   private documentsDir: string;
-  private indexDir: string;
 
   constructor(dataDir: string) {
     this.dataDir = dataDir;
     this.documentsDir = path.join(dataDir, 'documents');
-    this.indexDir = path.join(dataDir, 'index');
     this.ensureDirectories();
   }
 
   private ensureDirectories() {
     fs.mkdirSync(this.dataDir, { recursive: true });
     fs.mkdirSync(this.documentsDir, { recursive: true });
-    fs.mkdirSync(this.indexDir, { recursive: true });
     logger.info(SERVICE, 'Data directories initialized', { dataDir: this.dataDir });
   }
 
@@ -69,37 +66,11 @@ export class PersistenceService {
     }
   }
 
-  /** List all files in a directory. */
-  listFiles(relativePath: string): string[] {
+  /** Delete one stored file. Missing files are ignored. */
+  deleteFile(relativePath: string): void {
     const fullPath = path.join(this.dataDir, relativePath);
-    if (!fs.existsSync(fullPath)) return [];
-    return fs.readdirSync(fullPath);
-  }
-
-  /** Check if a file exists. */
-  exists(relativePath: string): boolean {
-    return fs.existsSync(path.join(this.dataDir, relativePath));
-  }
-
-  /** Get the data directory path. */
-  getDataDir(): string {
-    return this.dataDir;
-  }
-
-  /** Get the documents directory path. */
-  getDocumentsDir(): string {
-    return this.documentsDir;
-  }
-
-  /** Get the index directory path. */
-  getIndexDir(): string {
-    return this.indexDir;
-  }
-
-  /** Delete all stored data and recreate directories. */
-  resetAll(): void {
-    fs.rmSync(this.dataDir, { recursive: true, force: true });
-    this.ensureDirectories();
-    logger.info(SERVICE, 'All data reset');
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
   }
 }

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { ConversationHistory } from './components/ConversationHistory';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
+import { Document, AppStatus, QAResponse } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -17,10 +17,15 @@ export function App() {
   const [lastResponse, setLastResponse] = useState<QAResponse | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
-  const refreshDocuments = useCallback(async () => {
+  const refreshDocuments = useCallback(async (selectId?: string) => {
     try {
       const docs = await window.knowledgeBase.documents.list();
       setDocuments(docs);
+      setSelectedDoc((current) => {
+        const id = selectId ?? current?.id;
+        if (!id) return null;
+        return docs.find((doc) => doc.id === id) ?? null;
+      });
       const status = await window.knowledgeBase.indexing.status();
       setAppStatus(status);
     } catch (err) {
@@ -33,8 +38,14 @@ export function App() {
   }, [refreshDocuments]);
 
   const handleImport = useCallback(async () => {
-    console.log('Import triggered - use window.knowledgeBase.documents.import(filePath)');
-  }, []);
+    try {
+      const imported = await window.knowledgeBase.documents.import();
+      if (!imported) return;
+      await refreshDocuments(imported.id);
+    } catch (err) {
+      console.error('Import failed:', err);
+    }
+  }, [refreshDocuments]);
 
   const handleSelectDocument = useCallback((doc: Document) => {
     setSelectedDoc(doc);
@@ -79,7 +90,7 @@ export function App() {
             {showHistory ? 'Hide' : 'Show'} History
           </button>
           <button
-            onClick={refreshDocuments}
+            onClick={() => { void refreshDocuments(); }}
             style={{
               padding: '6px 14px',
               background: '#0f3460',
@@ -144,7 +155,7 @@ export function App() {
             ) : (
               <>
                 {selectedDoc ? (
-                  <DocumentDetail document={selectedDoc} />
+                  <DocumentDetail document={selectedDoc} onChange={() => refreshDocuments()} />
                 ) : (
                   <div style={{ color: '#666', textAlign: 'center', paddingTop: '40px' }}>
                     Select a document or ask a question to get started

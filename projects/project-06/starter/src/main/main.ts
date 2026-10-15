@@ -24,13 +24,8 @@ function createWindow() {
     title: 'Knowledge Base',
   });
 
-  // In development, load from Vite dev server or built renderer
   const isDev = !app.isPackaged;
-  if (isDev) {
-    mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  }
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -43,14 +38,13 @@ function initializeServices() {
   const dataDir = path.join(app.getPath('userData'), 'knowledge-base-data');
   const persistence = new PersistenceService(dataDir);
   const documentService = new DocumentService(persistence);
-  const indexingService = new IndexingService(persistence);
+  const indexingService = new IndexingService(persistence, documentService);
   const qaService = new QaService(persistence, indexingService);
 
   registerIpcHandlers(ipcMain, {
     documentService,
     indexingService,
     qaService,
-    persistence,
   });
 
   logger.info('main', 'Services initialized', { dataDir });

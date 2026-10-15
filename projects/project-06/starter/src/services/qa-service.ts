@@ -1,4 +1,4 @@
-import { QAResponse, QAHistory, Citation, Chunk } from '../shared/types';
+import { QAResponse, QAHistory, Citation } from '../shared/types';
 import { PersistenceService } from './persistence-service';
 import { IndexingService } from './indexing-service';
 import { logger } from './logger';
@@ -53,16 +53,14 @@ export class QaService {
   private persistence: PersistenceService;
   private indexingService: IndexingService;
 
-  constructor(persistence: PersistenceService, indexingService?: IndexingService) {
+  constructor(persistence: PersistenceService, indexingService: IndexingService) {
     this.persistence = persistence;
-    this.indexingService = indexingService ?? new IndexingService(persistence);
+    this.indexingService = indexingService;
   }
 
   /** Ask a question and get a grounded answer with citations. */
   async ask(question: string): Promise<QAResponse> {
     logger.info(SERVICE, 'Processing question', { question });
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 400));
 
     const chunks = this.indexingService.getAllChunks();
     const citations: Citation[] = [];
@@ -131,15 +129,12 @@ export class QaService {
   }
 
   private generateAnswer(question: string, citations: Citation[]): string {
-    // Match against mock patterns
-    const questionLower = question.toLowerCase();
-    for (const pattern of MOCK_PATTERNS) {
-      if (pattern.keywords.some(kw => questionLower.includes(kw))) {
-        if (citations.length > 0) {
-          return `${pattern.answer} Based on the document "${citations[0].documentTitle}", ${citations[0].excerpt.substring(0, 100)}.`;
-        }
-        return pattern.answer;
+    const pattern = this.bestPattern(question);
+    if (pattern) {
+      if (citations.length > 0) {
+        return `${pattern.answer} Based on the document "${citations[0].documentTitle}", ${citations[0].excerpt.substring(0, 100)}.`;
       }
+      return pattern.answer;
     }
 
     // Fallback answer
@@ -148,6 +143,26 @@ export class QaService {
     }
 
     return 'No relevant documents have been indexed yet. Please import and index documents before asking questions.';
+  }
+
+  /** Pick the pattern with the most keyword hits. The first listed pattern wins a tie. */
+  private bestPattern(question: string): (typeof MOCK_PATTERNS)[number] | null {
+    const questionLower = question.toLowerCase();
+    let best: (typeof MOCK_PATTERNS)[number] | null = null;
+    let bestScore = 0;
+
+    for (const pattern of MOCK_PATTERNS) {
+      const score = pattern.keywords.reduce(
+        (sum, keyword) => sum + (questionLower.includes(keyword) ? 1 : 0),
+        0,
+      );
+      if (score > bestScore) {
+        best = pattern;
+        bestScore = score;
+      }
+    }
+
+    return best;
   }
 
   private saveToHistory(question: string, response: QAResponse): void {

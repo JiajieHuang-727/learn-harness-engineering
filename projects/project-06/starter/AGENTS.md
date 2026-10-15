@@ -16,15 +16,14 @@ Before writing any code, complete these steps in order:
 
 This is the **capstone project** for the Learn Harness Engineering course. It combines all features from Projects 01-05 into a single complete product:
 
-- Document import with validation
-- Text indexing with progress tracking
+- Document import with validation, including a native file dialog
+- Text indexing that records chunk ids and marks the document indexed
 - Grounded Q&A with citations
-- Conversation history with chat-style display
-- Structured logging for runtime observability
-- Feedback collection on Q&A responses
-- Clean state reset for testing
-- Benchmark scripts for performance measurement
-- Cleanup scanner for detecting stale artifacts
+- A flat conversation history
+- Structured JSON logging
+- Delete that removes the document's files and index entry
+
+Feedback controls, an in-app reset, `scripts/benchmark.sh`, and `scripts/cleanup-scanner.sh` are not in this tree.
 
 ## Docs Hierarchy
 
@@ -34,7 +33,7 @@ The `docs/` directory is organized for agent readability:
 docs/
   ARCHITECTURE.md   -- Electron layers, data flow, full pipeline
   PRODUCT.md        -- Feature requirements and user-facing behavior
-  RELIABILITY.md    -- Logging, observability, clean state, benchmarking
+  RELIABILITY.md    -- Logging and how to empty the data directory
 ```
 
 When adding new features, update the relevant doc before writing code.
@@ -49,7 +48,7 @@ When adding new features, update the relevant doc before writing code.
 ### Preload (`src/preload/`)
 - The ONLY bridge between main and renderer.
 - Uses `contextBridge.exposeInMainWorld` to expose typed APIs.
-- Exposes: documents, indexing, qa, feedback, app namespaces.
+- Exposes: documents, indexing, qa.
 
 ### Renderer (`src/renderer/`)
 - React + TypeScript UI layer.
@@ -59,7 +58,7 @@ When adding new features, update the relevant doc before writing code.
 ### Services (`src/services/`)
 - Pure TypeScript business logic in the main process.
 - Constructor-injected `PersistenceService`.
-- All services use `logger.forService()` for structured JSON output.
+- All services log JSON through `logger.debug/info/warn/error`.
 
 ## Conventions
 
@@ -67,6 +66,7 @@ When adding new features, update the relevant doc before writing code.
 - Named exports only.
 - IPC channels defined once in `src/shared/types.ts`.
 - New IPC channels follow the pattern: `namespace:action`.
+- Log with `logger.debug/info/warn/error(serviceName, message, data)`.
 - All service methods must log at INFO level for significant events.
 - DEBUG level for routine data access.
 - WARN for missing but non-critical data.
@@ -98,7 +98,6 @@ When resuming work, read `session-handoff.md` for context from the previous sess
 
 Before each major testing cycle:
 
-1. Run `bash scripts/cleanup-scanner.sh` to check for stale artifacts.
-2. Use the in-app Reset button or `RESET_DATA` IPC to clear all data.
-3. Verify `clean-state-checklist.md` passes.
-4. Run `bash scripts/benchmark.sh` to measure performance.
+1. Quit the app and delete the data directory printed by `Data directories initialized`. There is no in-app reset.
+2. Verify `clean-state-checklist.md`.
+3. Run the five tasks in `benchmark-tasks.md` when a UI pass is required. There is no `scripts/benchmark.sh` or `scripts/cleanup-scanner.sh`.

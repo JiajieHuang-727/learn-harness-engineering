@@ -87,42 +87,9 @@ class Logger {
   error(service: string, message: string, data?: Record<string, unknown>): void {
     this.log(LogLevel.ERROR, service, message, data);
   }
-
-  /** Create a child logger scoped to a specific service. */
-  forService(serviceName: string): ServiceLogger {
-    return new ServiceLogger(this, serviceName);
-  }
-}
-
-class ServiceLogger {
-  private logger: Logger;
-  private serviceName: string;
-
-  constructor(logger: Logger, serviceName: string) {
-    this.logger = logger;
-    this.serviceName = serviceName;
-  }
-
-  debug(message: string, data?: Record<string, unknown>): void {
-    this.logger.debug(this.serviceName, message, data);
-  }
-
-  info(message: string, data?: Record<string, unknown>): void {
-    this.logger.info(this.serviceName, message, data);
-  }
-
-  warn(message: string, data?: Record<string, unknown>): void {
-    this.logger.warn(this.serviceName, message, data);
-  }
-
-  error(message: string, data?: Record<string, unknown>): void {
-    this.logger.error(this.serviceName, message, data);
-  }
 }
 
 /** Singleton logger instance for the application. */
 export const logger = new Logger(
   (process.env.LOG_LEVEL as LogLevel) ?? LogLevel.DEBUG
 );
-
-export { ServiceLogger };

@@ -1,105 +1,72 @@
-# Product Description -- Knowledge Base (Capstone)
+# Product Description -- Knowledge Base
 
 ## What Is This?
 
-A desktop application for managing a personal knowledge base. Users import text and Markdown documents, the system indexes them into searchable chunks, and provides grounded question answering with citations. Users can view conversation history, provide feedback on answers, and reset the application to a clean state for testing.
+A desktop application for a personal knowledge base. Import a text or Markdown file, index it into chunks, and ask questions. Answers cite the indexed chunks. Questions and answers stay on disk across restarts.
 
-## Core Features
+## Document Management
 
-### Document Management
-- Import `.txt` and `.md` files through a file picker in the ImportPanel.
-- File validation: existence check, 10 MB size limit.
-- View document metadata: title, filename, size, import date, indexing status.
-- View document chunks with metadata (character count, word count).
-- Browse a list of all imported documents in a sidebar panel.
-- Delete documents and their associated data (content file, original copy).
+- Import `.txt` and `.md` files. The Import button opens the operating-system file dialog. Choosing Cancel does nothing.
+- Validation: the file must exist, the extension must be `.txt` or `.md`, and the size must be at most 10 MB.
+- The title is the first Markdown heading. `retrieval-plan.md` is titled `Retrieval Plan`. A file with no heading uses the filename without its extension, so `meeting-summary.txt` is titled `meeting-summary`.
+- The sidebar shows the title, the size, and the word Indexed once the document has been indexed.
+- The detail pane shows filename, import time, size, status, and chunk count.
+- Show Chunks lists each chunk's index, character count, and full text.
+- Delete asks for confirmation, then removes the document, its text, its chunks, and its index entry.
 
-### Text Indexing
-- Split documents into ~500-character chunks at paragraph boundaries.
-- Store chunks with metadata (character count, word count).
-- Track indexing status per document and overall.
-- Support indexing individual documents or the full library.
-- Documents automatically marked as "indexed" after chunking.
-- Indexing status visible in sidebar and status bar.
+## Text Indexing
 
-### Grounded Q&A
-- Ask natural language questions about the document library.
-- Receive answers with citations pointing to specific document chunks.
-- Confidence scores indicate answer reliability (0.85 with citations, 0.30 without).
-- 8 mock answer patterns covering architecture, import, indexing, retrieval, meetings, logging, feedback, and clean state.
-- Full Q&A history is persisted across sessions.
-- Query latency typically under 500ms.
+- Index Document splits the selected document on blank lines and keeps each chunk near 500 characters.
+- The document status becomes `indexed`, and the chunk count is stored on the document.
+- The chunk list reloads when that status and count change. Leaving the detail pane is not required.
+- `indexing.start()` with no document id indexes every document that does not already have chunk ids.
 
-### Conversation History
-- Chat-style display of all Q&A exchanges.
-- User questions shown as purple bubbles (right-aligned).
-- Assistant answers shown as dark bubbles (left-aligned).
-- Expandable citations for each answer.
-- Confidence indicator with color coding (green/yellow/red).
-- Timestamps on each exchange.
-- Clear history with confirmation dialog.
+## Grounded Q&A
 
-### Feedback Collection
-- Thumbs up/down buttons on each Q&A response in conversation history.
-- Thumbs up/down buttons on the latest response in document view.
-- Feedback persists across sessions.
-- Each feedback entry includes: ID, Q&A timestamp, question, rating, optional comment, submission time.
+- The question box sends the text as typed.
+- The answer is chosen from seven mock patterns by counting keyword hits. The pattern with the most hits wins. An earlier pattern wins a tie.
+- Up to two citations are attached. Each citation has the document title, the chunk index, and an excerpt.
+- Confidence is 85% when a citation is attached, and 30% when none is.
+- The indexing question below matches the indexing pattern, not the import pattern, because `index` and `chunk` outscore `document`:
 
-### Clean State Reset
-- Reset button in application header.
-- Confirmation dialog before reset.
-- Clears all documents, chunks, Q&A history, and feedback.
-- Application returns to initial empty state.
-- Data directory is removed and recreated.
-
-### Persistence
-- All data persists across application restarts.
-- Document list loads automatically on application startup.
-- Data stored locally in the user's application data directory.
-- Four data files: documents-meta.json, qa-history.json, feedback.json, index-meta.json.
-
-### Status Bar
-- Real-time display of index status (idle, indexing, ready, error).
-- Color-coded status indicator.
-- Document count.
-- Indexed document count.
-- Last activity timestamp.
-
-## User Interface
-
+```text
+How does the indexing pipeline split documents into chunks?
 ```
-+------------------+----------------------------------------+
-| Header           | History | Reset | Refresh              |
-+------------------+----------------------------------------+
-| Document List    | Document Detail / Conversation History |
-| (sidebar)        |   - Metadata display                   |
-|                  |   - Show Chunks toggle                 |
-| [+ Import]       |   - Index Document button              |
-|                  |   - Delete button                      |
-| doc1 (Indexed)   |                                        |
-|   3.2 KB         | Q&A Response:                          |
-| doc2 (Imported)  |   Answer text...                       |
-|   1.8 KB         |   Citations: [expandable]              |
-|                  |   Confidence: high                     |
-|                  |   [+1] [-1] feedback                   |
-+------------------+----------------------------------------+
-| Ask a question...                              [Ask]       |
-+-----------------------------------------------------------+
-| Status: Ready | Documents: 3 | Indexed: 3 | 12:34 PM     |
-+-----------------------------------------------------------+
-```
+
+That answer says the pipeline splits on paragraph boundaries at about 500 characters. With `retrieval-plan.md` indexed, the citations use the title `Retrieval Plan`.
+
+## Conversation History
+
+- Show History replaces the detail pane with a flat list.
+- Each row shows the question, the answer, the citation count and confidence when citations exist, and the timestamp.
+- Clear History removes the saved list immediately. There is no second confirmation.
+- Hide History returns to the document view.
+
+## Status Bar
+
+- Index state: idle, indexing, ready, or error, with a colored dot.
+- Document count (`documentsLoaded`).
+- Last activity, shown only when at least one document has an import time. The value is the newest `importedAt`.
+
+## Persistence
+
+- Data is stored under the user-data directory printed at startup as `Data directories initialized`.
+- The document list loads on startup.
+- Saved questions and answers load when Show History is opened.
+- There is no in-app reset. To start from an empty library, quit the app and delete that data directory.
 
 ## Constraints
 
-- Maximum supported file size: 10 MB.
-- Supported formats: `.txt`, `.md`.
-- Q&A uses mock patterns -- no LLM integration.
-- All data is local; no network requests.
-- Structured logging outputs to console (no file-based logging in this version).
+- Maximum file size: 10 MB.
+- Formats: `.txt` and `.md`.
+- Answers come from the mock patterns. There is no LLM call and no network request.
+- Logs are console JSON. They are not written to a file.
+- There is no feedback control, no chat-bubble layout, and no benchmark or cleanup script in this tree.
 
 ## Performance Targets
 
-- Import throughput: 10+ files per batch under 1 second.
-- Indexing speed: 100+ chunks per second.
-- Query latency: under 500ms per question.
-- Citation accuracy: top 2 chunks must be relevant.
+These are targets for the manual tasks in `benchmark-tasks.md`. This tree does not ship a `scripts/benchmark.sh`.
+
+- Import of a single sample file completes as a local copy and write.
+- Indexing the retrieval-plan sample produces 5 non-empty chunks.
+- A question returns without an artificial delay. The previous 100–500 ms sleep has been removed.

@@ -1,178 +1,62 @@
-# Reliability -- Observability, Clean State, and Benchmarking
+# Reliability -- Logging and a Clean Data Directory
 
 ## Structured Logging
 
-### Overview
-
-All services in the application emit structured JSON log entries. This enables runtime debugging, post-hoc analysis, and automated monitoring of application behavior.
-
-### Log Format
-
-Every log entry is a single-line JSON object:
+Every service writes one JSON object per line:
 
 ```json
 {
-  "timestamp": "2026-03-30T12:00:00.000Z",
+  "timestamp": "2026-10-15T12:00:00.000Z",
   "level": "INFO",
-  "service": "document-service",
-  "message": "Document imported successfully",
+  "service": "indexing-service",
+  "message": "Single document indexed",
   "data": {
     "documentId": "abc-123",
-    "filename": "design-notes.md",
-    "sizeBytes": 2048
+    "chunkCount": 5
   }
 }
 ```
 
-### Log Levels
+Call `logger.debug`, `logger.info`, `logger.warn`, or `logger.error` with the service name, message, and optional data. There is no child logger.
 
-| Level | When to Use | Example |
-|-------|-------------|---------|
-| DEBUG | Routine data access, file reads | "Retrieved chunks for document" |
-| INFO | Significant events | "Document imported", "Batch indexing complete" |
-| WARN | Missing but non-critical data | "Content not found for document" |
-| ERROR | Failures | "File not found during import" |
+| Level | When |
+|-------|------|
+| DEBUG | Listing documents, and read-only IPC |
+| INFO | Import, metadata update, delete, indexing, question, answer, history clear |
+| WARN | Missing document on get, update, or delete; batch index skips a document with no content |
+| ERROR | File missing, unsupported type, over 10 MB, single-document index with no content |
 
-### Service Logging Points
-
-**PersistenceService:**
-- Directory initialization
-- File read/write operations (DEBUG)
-- Clean state reset (WARN)
-
-**DocumentService:**
-- Document import with size and metadata
-- Document deletion with remaining count
-- Document metadata updates
-- File not found errors
-- Size limit violations
-
-**IndexingService:**
-- Single and batch indexing start
-- Per-document indexing progress
-- Batch completion with throughput metrics
-- Content not found warnings
-
-**QaService:**
-- Question processing start
-- Answer generation with confidence and duration
-- Feedback submission
-- History clear
-
-**IPC Handlers:**
-- Every channel invocation (INFO for mutations, DEBUG for reads)
-- All registered channels at startup
-
-### Configuring Log Level
-
-Set the `LOG_LEVEL` environment variable:
-```bash
-LOG_LEVEL=INFO npm run dev  # Only INFO, WARN, ERROR
-LOG_LEVEL=WARN npm run dev  # Only WARN and ERROR
-LOG_LEVEL=ERROR npm run dev # Only ERROR
-```
-
-Default: `DEBUG` (all messages).
-
-## Clean State Management
-
-### Purpose
-
-Clean state management ensures that testing and benchmarking start from a known, empty state. This prevents accumulated data from affecting test results or causing unexpected behavior.
-
-### Reset Mechanism
-
-The application provides a `RESET_DATA` IPC channel that:
-
-1. Removes the entire data directory (`knowledge-base-data/`)
-2. Recreates the directory structure
-3. Returns a success response
-4. The renderer clears all React state and refreshes
-
-### When to Use Clean State
-
-- Before running benchmarks
-- After a debugging session
-- Before testing a new feature
-- When the data directory becomes corrupted
-
-### Clean State Verification
-
-Use the `clean-state-checklist.md` to verify:
-- Build passes without errors
-- Architecture boundaries are respected
-- Runtime behavior is correct
-- Logging output is as expected
-- Data integrity is maintained
-
-## Benchmarking
-
-### Overview
-
-The `scripts/benchmark.sh` script measures application performance across key operations. It uses file-based simulation to test the services layer without launching the Electron window.
-
-### Benchmark Tasks
-
-| Task | What It Measures | Target |
-|------|------------------|--------|
-| `import` | Document import throughput | 3 files in <1s |
-| `index` | Batch indexing speed | 14 chunks in <1s |
-| `query` | Q&A response latency | <500ms per question |
-| `verify` | Data integrity checks | 0 errors |
-
-### Running Benchmarks
+`LOG_LEVEL` sets the minimum. Unset means `DEBUG`.
 
 ```bash
-bash scripts/benchmark.sh
+LOG_LEVEL=INFO npm run dev
 ```
 
-Output example:
-```
-=== Benchmark Results ===
-[import] 3 files: 120ms (25.0 files/sec)
-[index]  3 documents: 80ms (175.0 chunks/sec)
-[query]  5 questions: 1250ms (250.0ms avg)
-[verify] Data integrity: PASS
-=== Summary: 4/4 tasks passed ===
-```
+IPC mutations log at INFO (`IMPORT_DOCUMENT`, `DELETE_DOCUMENT`, `START_INDEXING`, `ASK_QUESTION`, `CLEAR_HISTORY`). Reads log at DEBUG (`LIST_DOCUMENTS`, `GET_DOCUMENT`, `GET_INDEXING_STATUS`, `GET_CHUNKS`, `GET_HISTORY`). A canceled file dialog logs `IPC: IMPORT_DOCUMENT canceled`.
 
-### Interpreting Results
+Service messages to look for during the manual tasks:
 
-- If import is slow: check file size and disk I/O.
-- If indexing is slow: check chunk size and paragraph boundaries.
-- If query is slow: check number of chunks and keyword matching.
-- If verify fails: run `scripts/cleanup-scanner.sh` to identify issues.
+| Action | Message |
+|--------|---------|
+| Import | `Document imported` or `IPC: IMPORT_DOCUMENT` |
+| Index | `Single document indexed` or `IPC: START_INDEXING` |
+| Question | `Answer generated` (includes `confidence` and `citationCount`) or `IPC: ASK_QUESTION` |
 
-## Cleanup Scanner
+## Clean Data Directory
 
-### Overview
+There is no Reset button and no `app:reset` channel. `PersistenceService` does not delete the data directory by itself.
 
-The `scripts/cleanup-scanner.sh` script checks the data directory for stale or inconsistent artifacts.
+To run from an empty library:
 
-### Checks Performed
+1. Start the app once if the path is unknown.
+2. Quit it and confirm the `npm run dev` process has exited.
+3. Delete the directory printed in `Data directories initialized`.
+4. Start again. The document list is empty, and `Listing documents` reports `count: 0`.
 
-| Check | Description |
-|-------|-------------|
-| Orphaned content files | Content files without a matching document in metadata |
-| Dangling chunk files | Chunk files without a matching index entry |
-| Missing content files | Documents in metadata without a content file |
-| Inconsistent metadata | Documents marked as indexed without chunk files |
-| Empty data files | JSON files with empty arrays that should have data |
-| Stale Q&A history | History entries referencing deleted documents |
+That directory holds `documents-meta.json`, `content/`, `documents/`, `chunks/`, `index-meta.json`, and `qa-history.json`. Deleting a document through the UI removes that document's files and its `index-meta.json` entry. It does not clear other documents or the Q&A history.
 
-### Running the Scanner
+## Manual Tasks
 
-```bash
-bash scripts/cleanup-scanner.sh
-```
+`benchmark-tasks.md` is the fixed five-task check. It is not a shell benchmark. `scripts/benchmark.sh` and `scripts/cleanup-scanner.sh` are not in this tree.
 
-Output example:
-```
-=== Cleanup Scanner ===
-[OK] No orphaned content files
-[OK] No dangling chunk files
-[OK] No missing content files
-[OK] All indexed documents have chunk files
-[OK] No stale Q&A references
-=== Result: CLEAN (0 issues) ===
-```
+After a code change, `npm run check` and `npm run build` are the automated gates. The import, index, question, and delete behavior can also be exercised by constructing the services against a temporary directory; they do not import Electron.
