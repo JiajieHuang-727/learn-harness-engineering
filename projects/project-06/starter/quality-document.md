@@ -4,37 +4,38 @@
 
 | Dimension | Grade | Notes |
 |-----------|-------|-------|
-| Build & Compile | C | Builds but has unused import warnings |
-| Feature Completeness | D | Missing feedback, clean state, benchmarking |
-| ConversationHistory | D | Basic list display, no chat bubbles or interactivity |
-| Structured Logging | C | Logger exists but not used in all services |
-| Q&A with Citations | B | Works for basic queries |
-| Document Import | B | Works via dev console only |
-| Indexing | B | Batch indexing works, no progress reporting |
-| Persistence | B | Data persists across restarts |
-| Test Coverage | F | No tests written |
-| Documentation | D | Minimal AGENTS.md only |
-| Clean State | F | No reset functionality |
-| Benchmarking | F | No benchmark scripts |
+| Build & Compile | C | `npm run check` fails on renderer imports of `shared/types`. Main `tsc` and `vite build` pass |
+| Feature Completeness | D | Import button, feedback, reachable reset, and benchmark script are missing |
+| ConversationHistory | D | Flat Q&A list with confidence and clear. No chat bubbles or feedback |
+| Structured Logging | B | JSON logs with timestamp, level, and service on main and services. A few IPC handlers are silent |
+| Q&A with Citations | C | Keyword citations exist. UI indexing does not register chunks, so that path returns none |
+| Document Import | C | Service import works by file path. The Import button only logs; title is the filename stem |
+| Indexing | C | Paragraph chunking works. Single-document indexing does not write index-meta or document status |
+| Persistence | B | Documents, content, and Q&A history are written to disk. Delete leaves content and chunks behind |
+| Test Coverage | F | No test files. Vitest is installed and unused |
+| Documentation | D | AGENTS.md, this file, and benchmark-tasks.md only. No CLAUDE.md, feature_list.json, or init.sh |
+| Clean State | D | `resetAll()` exists on PersistenceService and is not exposed through IPC or the UI |
+| Benchmarking | F | benchmark-tasks.md lists five tasks. There is no benchmark script |
 
-## Overall Grade: D+
+## Overall Grade: D
 
 ## Critical Gaps
 
-1. No feedback collection on Q&A responses
-2. No clean state reset functionality
-3. No benchmark scripts
-4. ConversationHistory is a flat list without chat styling
-5. Logger is basic -- no structured JSON output
-6. No test coverage at all
-7. Missing all advanced harness files (CLAUDE.md, feature_list.json, etc.)
+1. `npm run check` fails because renderer imports of `shared/types` use the wrong relative path
+2. The Import button does not select or import a file
+3. Index Document does not update index-meta or document status, so Q&A cannot see those chunks
+4. Status IPC returns indexing fields, not `AppStatus`, so the status bar does not show index state
+5. No feedback controls on answers
+6. `resetAll()` is not reachable from IPC or the UI
+7. No tests, no benchmark script, and no harness files beyond AGENTS.md
 
 ## Action Items
 
-- [ ] Add FeedbackEntry type and feedback service
-- [ ] Implement clean state reset via IPC
-- [ ] Create benchmark.sh script
-- [ ] Enhance ConversationHistory with chat bubbles
-- [ ] Add structured JSON logging to all services
-- [ ] Write tests for all services
-- [ ] Create full harness (CLAUDE.md, feature_list.json, init.sh, etc.)
+- [ ] Fix renderer imports so `npm run check` passes
+- [ ] Wire the Import button to a real file path
+- [ ] Write index-meta and document status when indexing one document
+- [ ] Return `AppStatus` from the status IPC
+- [ ] Add feedback on Q&A responses
+- [ ] Expose clean state reset through IPC
+- [ ] Add tests and a benchmark script
+- [ ] Create the missing harness files (CLAUDE.md, feature_list.json, init.sh, etc.)
