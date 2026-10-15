@@ -4,38 +4,29 @@ Date: 2026-10-15
 
 ## Accomplished
 
-Cleanup of dead code, docs that described a different app, and the runtime paths that failed the baseline tasks.
+Re-ran the five tasks in `benchmark-tasks.md` in the window and scored them. Record: `cleanup-benchmark-record.md`.
 
-- Removed the unused `conversation:get` channel, `app:status` channel, `ConversationMessage`, `ImportPanel`, `logger.forService`, and the unused persistence helpers including `resetAll`.
-- Renderer type imports point at `src/shared/types.ts`. `npm run check` and `npm run build` pass.
-- Import opens a native file dialog. A Markdown H1 becomes the title. `.txt`/`.md` only, 10 MB max.
-- Single-document indexing writes `index-meta.json`, sets `status` to `indexed`, and the detail view reloads chunks.
-- Q&A picks the mock pattern with the most keyword hits. The fixed indexing question returns the paragraph / 500-character answer at confidence 0.85 with `Retrieval Plan` citations.
-- `indexing.status()` returns `AppStatus`.
-- Delete removes the copied file, content, chunks, and the index entry, after a confirmation in the detail pane.
-- Docs, `feature_list.json`, `init.sh`, the checklist, and the rubric match this tree.
-
-Service check on 2026-10-15, temporary data directory, no Electron window:
-
-- `retrieval-plan.md` title: `Retrieval Plan`
-- index result: status `indexed`, 5 non-empty chunks, `index-meta.json` present
-- fixed question: confidence `0.85`, two citations titled `Retrieval Plan`, answer mentions paragraph boundaries and 500 characters
-- delete: content file, chunk file, and index entry removed
-- `package.json` rejected as an unsupported type
+- Clean start: deleted `/Users/jiajiehuang/Library/Application Support/knowledge-base/knowledge-base-data` after the startup log showed `count` 1. Next start was `Documents (0)`.
+- T1 带缺陷完成, 1 retry. The file dialog first imported the project-02 copy. The specified project-06 file was imported with the console call. Title `Retrieval Plan`, 1.9 KB.
+- T2 通过. `Status: indexed`, five non-empty chunks.
+- T3 通过. Confidence 85%, two `Retrieval Plan` citations, answer mentions paragraph boundaries and about 500 characters.
+- T4 通过. Same terminal, three JSON lines with timestamp, level, service, and message.
+- T5 通过. After quit and relaunch, the indexed document and the T3 history entry were still in the window.
+- Totals: completion 5/5, strict pass 4/5, retries 1, defects 1. Baseline was 4/5, 1/5, 4 retries, 4 defects.
 
 ## Remains
 
 - Feedback is not implemented (`feature_list.json` status `fail`).
 - No in-app reset. Clean state is deleting the data directory from the startup log.
 - No `scripts/benchmark.sh`, no `scripts/cleanup-scanner.sh`, no Vitest tests.
-- The five tasks in `benchmark-tasks.md` were not clicked through a window after this change. The baseline record is still the last UI run.
+- The native file dialog does not reliably select the specified path.
 
 ## Decisions
 
-- Docs were rewritten to this tree. Missing product areas stayed missing instead of being built in this pass.
-- `index-meta.json` stays in the data root, which is where Q&A already reads it. The unused `index/` directory is no longer created.
-- The artificial 100–500 ms delay in `QaService.ask` was removed.
+- The wrong project-02 import was deleted in the window before the console import. It is not the T1 pass evidence.
+- Citation excerpts truncated around 100 characters were still matchable to `retrieval-plan.md`, so that was not scored as a defect.
+- `benchmark-tasks.md` was not edited.
 
 ## Files
 
-`src/shared/types.ts`, `src/services/*`, `src/main/*`, `src/preload/preload.ts`, `src/renderer/*`, `docs/*`, `AGENTS.md`, `CLAUDE.md`, `init.sh`, `feature_list.json`, `clean-state-checklist.md`, `evaluator-rubric.md`, `quality-document.md`, `session-handoff.md`. Deleted `src/renderer/components/ImportPanel.tsx`.
+`cleanup-benchmark-record.md`, `quality-document.md`, `evaluator-rubric.md`, `session-handoff.md`.
